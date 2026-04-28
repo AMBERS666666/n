@@ -1,0 +1,4439 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>笔记</title>
+<style>
+  /* ============ 设计语言：仿明刻本 + 现代克制 ============ */
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=ZCOOL+QingKe+HuangYou&display=swap');
+
+  :root {
+    --ink: #1a1614;
+    --ink-soft: #3a322c;
+    --paper: #f4ede0;
+    --paper-deep: #ebe1cd;
+    --vermillion: #a62828;       /* 朱砂 */
+    --vermillion-deep: #7a1818;
+    --seal-red: #b8342f;
+    --gold: #8b6914;
+    --jade: #4a6b52;
+    --rule: #c9b896;
+    --shadow: rgba(26,22,20,0.12);
+    --correct-bg: #d4e3d4;
+    --correct-fg: #2d5230;
+    --wrong-bg: #f3d4d0;
+    --wrong-fg: #8a2520;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background: var(--paper);
+    background-image:
+      radial-gradient(ellipse at top left, rgba(166,40,40,0.04), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(139,105,20,0.05), transparent 50%),
+      repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(26,22,20,0.012) 2px, rgba(26,22,20,0.012) 3px);
+    font-family: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
+    color: var(--ink);
+  }
+
+  .app { max-width: 980px; margin: 0 auto; padding: 32px 24px 80px; }
+
+  /* ============ 顶部 ============ */
+  header {
+    padding: 0;
+    margin-bottom: 16px;
+  }
+
+  /* ============ 控制面板 ============ */
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 28px;
+    padding: 18px;
+    background: rgba(255,255,255,0.4);
+    border: 1px solid var(--rule);
+  }
+
+  .ctrl-group { display: flex; flex-direction: column; gap: 6px; }
+  .ctrl-group label {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+  }
+  select, button {
+    font-family: inherit;
+    border: 1px solid var(--ink);
+    background: var(--paper);
+    color: var(--ink);
+    padding: 8px 14px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  select:hover { background: var(--paper-deep); }
+
+  .mode-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .tab {
+    flex: 1;
+    padding: 12px 8px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-family: inherit;
+    font-size: 14px;
+    letter-spacing: 4px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .tab.active {
+    color: var(--vermillion-deep);
+    border-bottom-color: var(--vermillion);
+    font-weight: 600;
+  }
+  .tab:hover:not(.active) { color: var(--ink); background: rgba(0,0,0,0.02); }
+
+  /* ============ 统计面板 ============ */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin-bottom: 24px;
+  }
+  .stat {
+    background: var(--paper);
+    padding: 12px 8px;
+    text-align: center;
+  }
+  .stat .num {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--ink);
+    font-family: 'Noto Serif SC', serif;
+    display: block;
+    line-height: 1;
+  }
+  .stat .lbl {
+    font-size: 11px;
+    color: var(--ink-soft);
+    letter-spacing: 2px;
+    margin-top: 4px;
+    display: block;
+  }
+  .stat.acc .num { color: var(--vermillion); }
+  .stat.wrong .num { color: var(--seal-red); }
+
+  /* ============ 题面 ============ */
+  .question-card {
+    background: rgba(255,255,255,0.5);
+    border: 1px solid var(--rule);
+    padding: 32px 32px 28px;
+    margin-bottom: 24px;
+    position: relative;
+    box-shadow: 0 2px 0 var(--shadow);
+  }
+  .question-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--vermillion) 0%, var(--vermillion) 30%, transparent 30%, transparent 70%, var(--gold) 70%, var(--gold) 100%);
+  }
+
+  .meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: var(--ink-soft);
+    letter-spacing: 2px;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px dashed var(--rule);
+  }
+  .meta .badge {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 2px 10px;
+    font-size: 11px;
+    letter-spacing: 2px;
+  }
+  .meta .qid { font-family: monospace; opacity: 0.6; }
+
+  .question-text {
+    font-size: 19px;
+    line-height: 2;
+    color: var(--ink);
+    margin-bottom: 20px;
+    text-align: justify;
+  }
+
+  /* 内嵌输入框 */
+  .blank-input {
+    display: inline-block;
+    min-width: 80px;
+    max-width: 100%;
+    padding: 2px 8px;
+    margin: 0 3px;
+    border: none;
+    border-bottom: 2px solid var(--vermillion);
+    background: rgba(166,40,40,0.05);
+    font-family: inherit;
+    font-size: 17px;
+    color: var(--ink);
+    text-align: center;
+    transition: all 0.2s;
+    outline: none;
+  }
+  .blank-input:focus {
+    background: rgba(166,40,40,0.12);
+    border-bottom-width: 3px;
+  }
+  .blank-input.correct {
+    background: var(--correct-bg);
+    border-bottom-color: var(--correct-fg);
+    color: var(--correct-fg);
+  }
+  .blank-input.partial {
+    background: #fbeed8;
+    border-bottom-color: #b88528;
+    color: #6e4d10;
+  }
+  .blank-input.wrong {
+    background: var(--wrong-bg);
+    border-bottom-color: var(--wrong-fg);
+    color: var(--wrong-fg);
+    text-decoration: line-through;
+  }
+  .blank-input.reveal {
+    background: rgba(74,107,82,0.1);
+    border-bottom-color: var(--jade);
+    color: var(--ink-soft);
+    font-style: italic;
+  }
+  .blank-num {
+    display: inline-block;
+    min-width: 22px;
+    height: 22px;
+    line-height: 22px;
+    background: var(--vermillion);
+    color: var(--paper);
+    border-radius: 50%;
+    font-size: 12px;
+    text-align: center;
+    margin: 0 4px 0 0;
+    font-family: 'Noto Serif SC', serif;
+    vertical-align: middle;
+  }
+
+  /* 行内正解：紧贴输入框右侧显示 */
+  .inline-answer {
+    display: inline-block;
+    margin: 0 6px 0 4px;
+    padding: 1px 10px 1px 6px;
+    background: linear-gradient(90deg, rgba(74,107,82,0.08), rgba(74,107,82,0.18));
+    border: 1px solid var(--jade);
+    border-radius: 2px;
+    font-size: 15px;
+    color: var(--correct-fg);
+    font-weight: 600;
+    vertical-align: baseline;
+    animation: slideIn 0.3s ease-out;
+    white-space: nowrap;
+  }
+  .inline-answer .ia-arrow {
+    color: var(--jade);
+    margin-right: 4px;
+    font-weight: 400;
+    opacity: 0.6;
+  }
+  .inline-answer .ia-text {
+    font-family: 'Noto Serif SC', serif;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-6px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* ============ 操作按钮 ============ */
+  .actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 20px;
+  }
+  .btn {
+    border: 1px solid var(--ink);
+    background: var(--paper);
+    color: var(--ink);
+    padding: 10px 24px;
+    font-family: inherit;
+    font-size: 14px;
+    letter-spacing: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    min-width: 100px;
+  }
+  .btn:hover { background: var(--ink); color: var(--paper); }
+  .btn.primary {
+    background: var(--vermillion);
+    color: var(--paper);
+    border-color: var(--vermillion);
+  }
+  .btn.primary:hover {
+    background: var(--vermillion-deep);
+    border-color: var(--vermillion-deep);
+  }
+  .btn.ghost {
+    background: transparent;
+    border: 1px dashed var(--ink-soft);
+    color: var(--ink-soft);
+  }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* 键盘提示 keycap */
+  .kbd {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 6px;
+    font-size: 11px;
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    letter-spacing: 0;
+    border: 1px solid currentColor;
+    border-radius: 3px;
+    opacity: 0.7;
+    vertical-align: 1px;
+  }
+
+  .kbd-hint {
+    text-align: center;
+    margin: 14px 0 8px;
+    font-size: 11px;
+    color: var(--ink-soft);
+    letter-spacing: 1px;
+    opacity: 0.8;
+  }
+  .kbd-hint .kbd { margin-left: 2px; margin-right: 4px; }
+
+  /* ============ 结果横幅 ============ */
+  .result-banner {
+    display: none;
+    text-align: center;
+    padding: 14px;
+    margin: 16px 0;
+    font-size: 16px;
+    letter-spacing: 4px;
+    font-weight: 600;
+    border: 1px solid;
+  }
+  .result-banner.show { display: block; }
+  .result-banner.all-correct {
+    background: var(--correct-bg);
+    color: var(--correct-fg);
+    border-color: var(--correct-fg);
+  }
+  .result-banner.has-wrong {
+    background: var(--wrong-bg);
+    color: var(--wrong-fg);
+    border-color: var(--wrong-fg);
+  }
+  .result-banner .seal {
+    display: inline-block;
+    width: 36px;
+    height: 36px;
+    line-height: 32px;
+    border: 2px solid currentColor;
+    border-radius: 4px;
+    transform: rotate(-8deg);
+    margin: 0 12px;
+    font-family: 'ZCOOL QingKe HuangYou', serif;
+    font-size: 22px;
+  }
+
+  /* ============ 进度条 ============ */
+  .progress-wrap {
+    margin-bottom: 16px;
+  }
+  .progress-bar {
+    height: 4px;
+    background: var(--paper-deep);
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--vermillion), var(--gold));
+    width: 0;
+    transition: width 0.3s;
+  }
+  .progress-text {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--ink-soft);
+    letter-spacing: 2px;
+    margin-top: 6px;
+  }
+
+  /* ============ 错题列表 ============ */
+  .wrong-list {
+    display: none;
+  }
+  .wrong-list.show { display: block; }
+  .wrong-list-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--ink-soft);
+    font-size: 16px;
+    letter-spacing: 4px;
+  }
+  .wrong-list-empty .seal {
+    font-size: 48px;
+    color: var(--vermillion);
+    opacity: 0.4;
+    margin-bottom: 16px;
+  }
+
+  /* ============ 听课区域 ============ */
+  .listen-area { animation: fadeIn 0.35s ease-out; }
+
+  .listen-controls {
+    background: rgba(255,255,255,0.4);
+    border: 1px solid var(--rule);
+    padding: 18px;
+    margin-bottom: 24px;
+  }
+  .listen-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 12px;
+  }
+  .listen-row:last-child { margin-bottom: 0; }
+  .listen-row.two { grid-template-columns: 1fr 1fr; }
+
+  .listen-card {
+    background: rgba(255,255,255,0.5);
+    border: 1px solid var(--rule);
+    padding: 32px;
+    box-shadow: 0 2px 0 var(--shadow);
+    position: relative;
+  }
+  .listen-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--jade) 0%, var(--jade) 30%, transparent 30%, transparent 70%, var(--gold) 70%, var(--gold) 100%);
+  }
+
+  .listen-text {
+    min-height: 200px;
+    max-height: 50vh;
+    overflow-y: auto;
+    margin: 18px 0;
+    padding: 18px 22px;
+    background: rgba(74,107,82,0.04);
+    border-left: 3px solid var(--jade);
+    font-size: 17px;
+    line-height: 2.1;
+    color: var(--ink);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .listen-text .sentence {
+    transition: background 0.3s;
+    padding: 1px 3px;
+    border-radius: 2px;
+  }
+  .listen-text .sentence.active {
+    background: linear-gradient(90deg, rgba(166,40,40,0.18), rgba(166,40,40,0.08));
+    color: var(--vermillion-deep);
+    font-weight: 600;
+    box-shadow: 0 0 0 2px rgba(166,40,40,0.12);
+  }
+  .listen-text .blank-mark {
+    display: inline-block;
+    min-width: 30px;
+    padding: 0 6px;
+    margin: 0 2px;
+    background: rgba(74,107,82,0.15);
+    border-bottom: 2px solid var(--jade);
+    color: var(--correct-fg);
+    font-weight: 600;
+    border-radius: 2px;
+    font-size: 15px;
+  }
+  .listen-text .blank-num-inline {
+    color: var(--vermillion);
+    font-weight: 700;
+  }
+
+  .listen-progress {
+    margin: 14px 0;
+  }
+  .listen-progress-bar {
+    height: 4px;
+    background: var(--paper-deep);
+    overflow: hidden;
+  }
+  .listen-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--jade), var(--gold));
+    width: 0;
+    transition: width 0.3s;
+  }
+
+  .listen-tip {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--ink-soft);
+    letter-spacing: 2px;
+    opacity: 0.7;
+    min-height: 16px;
+  }
+
+  /* ============ 底部提示 ============ */
+  footer {
+    margin-top: 60px;
+    padding-top: 20px;
+    border-top: 1px solid var(--rule);
+    text-align: center;
+    font-size: 11px;
+    color: var(--ink-soft);
+    letter-spacing: 3px;
+    opacity: 0.7;
+  }
+  footer p { margin: 4px 0; }
+
+  /* ============ 移动端 ============ */
+  @media (max-width: 640px) {
+    .app { padding: 20px 14px 60px; }
+    h1 { font-size: 26px; letter-spacing: 4px; }
+    h1 .red { font-size: 20px; }
+    .controls { grid-template-columns: 1fr; gap: 10px; padding: 12px; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .question-card { padding: 22px 18px; }
+    .question-text { font-size: 17px; line-height: 1.9; }
+    .blank-input { font-size: 16px; min-width: 70px; }
+    .btn { padding: 9px 16px; font-size: 13px; letter-spacing: 2px; }
+    .tab { font-size: 12px; letter-spacing: 2px; }
+    .listen-row { grid-template-columns: 1fr; gap: 10px; }
+    .listen-card { padding: 22px 18px; }
+    .listen-text { font-size: 16px; line-height: 1.95; padding: 14px 16px; max-height: 45vh; }
+  }
+
+  /* 入场动画 */
+  .question-card { animation: fadeIn 0.35s ease-out; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div style="height: 12px;"></div>
+  </header>
+
+  <!-- 模式切换 -->
+  <div class="mode-tabs">
+    <button class="tab active" data-mode="practice">刷题</button>
+    <button class="tab" data-mode="listen">听课</button>
+    <button class="tab" data-mode="wrong">错题本</button>
+    <button class="tab" data-mode="reset">重置</button>
+  </div>
+
+  <!-- 控制面板 -->
+  <div class="controls" id="controls">
+    <div class="ctrl-group">
+      <label>科目</label>
+      <select id="subjectSel">
+        <option value="all">全部五科</option>
+        <option value="法理学">法理学</option>
+        <option value="宪法学">宪法学</option>
+        <option value="法制史">法制史</option>
+        <option value="民法">民法</option>
+        <option value="刑法">刑法</option>
+      </select>
+    </div>
+    <div class="ctrl-group">
+      <label>顺序</label>
+      <select id="orderSel">
+        <option value="sequential">顺序出题（按章节）</option>
+        <option value="random">随机抽题</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- 统计 -->
+  <div class="stats" id="stats">
+    <div class="stat"><span class="num" id="statTotal">0</span><span class="lbl">已答题数</span></div>
+    <div class="stat acc"><span class="num" id="statAcc">0%</span><span class="lbl">空格正确率</span></div>
+    <div class="stat"><span class="num" id="statRight">0</span><span class="lbl">全对题数</span></div>
+    <div class="stat wrong"><span class="num" id="statWrong">0</span><span class="lbl">错题待重做</span></div>
+  </div>
+
+  <!-- 进度条 -->
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-text">
+      <span id="progressLabel">第 1 / 1 题</span>
+      <span id="progressSubject">—</span>
+    </div>
+  </div>
+
+  <!-- 题目卡片 -->
+  <div id="quizArea"></div>
+
+  <!-- 错题列表 -->
+  <div id="wrongListArea" class="wrong-list"></div>
+
+  <!-- 听课区域 -->
+  <div id="listenArea" class="listen-area" style="display:none;">
+    <div class="listen-controls">
+      <div class="listen-row">
+        <div class="ctrl-group">
+          <label>科目</label>
+          <select id="listenSubject">
+            <option value="all">全部五科</option>
+            <option value="法理学">法理学</option>
+            <option value="宪法学">宪法学</option>
+            <option value="法制史">法制史</option>
+            <option value="民法">民法</option>
+            <option value="刑法">刑法</option>
+          </select>
+        </div>
+        <div class="ctrl-group">
+          <label>章节</label>
+          <select id="listenChapter"></select>
+        </div>
+      </div>
+      <div class="listen-row">
+        <div class="ctrl-group">
+          <label>填空读法</label>
+          <select id="listenBlankMode">
+            <option value="answer">读出答案（背诵）</option>
+            <option value="hint">读"序号"（默写）</option>
+          </select>
+        </div>
+        <div class="ctrl-group">
+          <label>语速</label>
+          <select id="listenRate">
+            <option value="0.7">0.7×</option>
+            <option value="0.85">0.85×</option>
+            <option value="1.0" selected>1.0×</option>
+            <option value="1.15">1.15×</option>
+            <option value="1.3">1.3×</option>
+            <option value="1.5">1.5×</option>
+          </select>
+        </div>
+        <div class="ctrl-group">
+          <label>连播</label>
+          <select id="listenAutoNext">
+            <option value="off">单章重复</option>
+            <option value="next" selected>顺序连播</option>
+          </select>
+        </div>
+      </div>
+      <div class="listen-row">
+        <div class="ctrl-group" style="grid-column: 1 / -1;">
+          <label>女声（依设备可用）</label>
+          <select id="listenVoice"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="listen-card">
+      <div class="meta">
+        <span class="badge" id="listenBadge">—</span>
+        <span id="listenChapterTitle">未选择章节</span>
+        <span class="qid" id="listenProgress">—</span>
+      </div>
+      <div class="listen-text" id="listenText">
+        选择科目和章节后点击"开始朗读"
+      </div>
+      <div class="listen-progress">
+        <div class="listen-progress-bar"><div class="listen-progress-fill" id="listenProgressFill"></div></div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="listenPrevBtn">← 上一章</button>
+        <button class="btn primary" id="listenPlayBtn">▶ 开始朗读</button>
+        <button class="btn" id="listenPauseBtn" disabled>⏸ 暂停</button>
+        <button class="btn" id="listenStopBtn" disabled>■ 停止</button>
+        <button class="btn" id="listenNextBtn">下一章 →</button>
+      </div>
+      <div class="listen-tip" id="listenTip"></div>
+    </div>
+  </div>
+
+  <footer>
+    <p>· <span id="totalQ">0</span> / <span id="totalB">0</span> ·</p>
+  </footer>
+</div>
+
+<script>
+// 综合题库：法理 / 宪法 / 法制史 / 民法 / 刑法
+// 每章一道大题，按 PDF 原始结构和顺序保留所有内容
+
+const QUESTIONS = [
+  {
+    "id": "fl-一",
+    "subject": "法理学",
+    "chapter": "第一章 法的概念与本质",
+    "question": "法的基本特征：①法是【1】的行为规范；②法是【2】的行为规范；③法是【3】的行为规范；④法是【4】的行为规范。\n\n马克思主义对法的本质的论述：马克思主义法律观的最主要的特征是：从\"【5】\"的关系链来理解法的本质。第一，【6】。第二，【7】。第三，【8】。",
+    "answers": [
+      [
+        "调整人的行为和社会关系"
+      ],
+      [
+        "由国家制定或认可"
+      ],
+      [
+        "规定权利和义务"
+      ],
+      [
+        "由国家强制力保证实施"
+      ],
+      [
+        "国家—阶级关系—物质生活条件",
+        "国家-阶级关系-物质生活条件"
+      ],
+      [
+        "法是被奉为法律的国家意志"
+      ],
+      [
+        "法是统治阶级意志的体现"
+      ],
+      [
+        "法从根本上是由一定的物质生活条件所决定的"
+      ]
+    ]
+  },
+  {
+    "id": "fl-二",
+    "subject": "法理学",
+    "chapter": "第二章 法的要素",
+    "question": "法律概念分类：【1】概念、【2】概念和【3】概念。法律概念功能：（1）【4】功能；（2）【5】功能。特定场合也可以同【6】。\n\n一个完整的法律规则在结构上由三个要素组成，即【7】、【8】和【9】。\n\n授权性规则：规定主体有【10】，肯定了主体为实现其利益所必需的行为自由。\n\n义务性规则：是规定主体【11】一定积极行为的规则。\n\n相对确定性规则：是对主体权利、义务或法律责任【12】的同时，又【13】执法人员在规则规定的范围以内根据具体事实状态进行选择，做出【14】。\n\n公理性原则：是从一定形态的社会关系的本质中产生出来的，得到广泛承认并【15】的【16】。\n\n政策性原则：是国家在管理社会事务过程中为实现一定目标而作出并【17】的【18】。\n\n法律原则对法的制定的作用：①法律原则【19】；②法律原则是【20】；③法律原则对【21】。\n\n法律原则对法律实施的作用：①【22】法律解释和法律推理；②【23】法律漏洞，【24】法律的调控能力；③【25】。",
+    "answers": [
+      [
+        "涉人"
+      ],
+      [
+        "涉事"
+      ],
+      [
+        "涉物"
+      ],
+      [
+        "认知"
+      ],
+      [
+        "构成"
+      ],
+      [
+        "法律原则结合起来，直接规范主体的行为",
+        "法律原则结合起来,直接规范主体的行为"
+      ],
+      [
+        "假定"
+      ],
+      [
+        "处理"
+      ],
+      [
+        "制裁"
+      ],
+      [
+        "做出或不做出某种行为的权利"
+      ],
+      [
+        "应当或必须做出"
+      ],
+      [
+        "做出概括规定"
+      ],
+      [
+        "允许"
+      ],
+      [
+        "一定自由裁量的规则"
+      ],
+      [
+        "被奉为法律准则"
+      ],
+      [
+        "公理"
+      ],
+      [
+        "被确认作为法律准则"
+      ],
+      [
+        "政治决策"
+      ],
+      [
+        "直接决定了法律制度的基本性质、内容和价值取向",
+        "直接决定了法律制度的基本性质,内容和价值取向"
+      ],
+      [
+        "法律制度内部协调统一的重要保障"
+      ],
+      [
+        "法律改革具有导向作用"
+      ],
+      [
+        "指导"
+      ],
+      [
+        "补充"
+      ],
+      [
+        "强化"
+      ],
+      [
+        "限制自由裁量权的合理范围"
+      ]
+    ]
+  },
+  {
+    "id": "fl-三",
+    "subject": "法理学",
+    "chapter": "第三章 法的产生、发展与历史类型",
+    "question": "法产生的标志主要包括：（1）【1】；（2）【2】；（3）【3】。\n\n法产生的一般规律：①法律制度是在【4】和【5】的社会背景下孕育、萌芽并与【6】相伴发展和确立起来的；②法律制度形成过程是一个从【7】发展为【8】的过程；③法律制度的形成经历了由【9】到【10】、再发展成为【11】的长期过程；④法律、道德和宗教等社会规范从【12】，逐渐分化为【13】的规范系统。\n\n资本主义法律制度的基本特征：（1）【14】原则；（2）【15】原则；（3）法律面前人人平等原则。\n\n英美法系和大陆法系的区别：（1）【16】的不同；（2）【17】的不同；（3）【18】的不同；（4）【19】的不同。",
+    "answers": [
+      [
+        "国家的产生"
+      ],
+      [
+        "诉讼与审判的出现"
+      ],
+      [
+        "权利与义务的分离"
+      ],
+      [
+        "私有制"
+      ],
+      [
+        "阶级逐渐形成"
+      ],
+      [
+        "国家组织"
+      ],
+      [
+        "个别调整"
+      ],
+      [
+        "一般调整"
+      ],
+      [
+        "习惯"
+      ],
+      [
+        "习惯法"
+      ],
+      [
+        "成文法"
+      ],
+      [
+        "混沌一体"
+      ],
+      [
+        "各自相对独立"
+      ],
+      [
+        "私有财产神圣不可侵犯"
+      ],
+      [
+        "契约自由"
+      ],
+      [
+        "法律渊源"
+      ],
+      [
+        "法律结构"
+      ],
+      [
+        "法官权限"
+      ],
+      [
+        "诉讼程序"
+      ]
+    ]
+  },
+  {
+    "id": "fl-四",
+    "subject": "法理学",
+    "chapter": "第四章 法的价值",
+    "question": "法的价值的概念：（1）【1】，立法施法要实现的终极目标；（2）【2】，法律本身的优良属性；（3）【3】，法律评判事物的价值标尺。\n\n法律保障自由的基本方式：（1）划定国家权力的【4】，并【5】行使国家权力的正当程序；（2）确立了国家权力对自由非法侵害时的【6】；（3）自由的主体或自由享有者本身也必须承担善待【7】。\n\n法律确认和保障自由的原则：（1）主体【8】、【9】、【10】的【11】原则；（2）【12】原则；（3）【13】原则；（4）【14】原则。",
+    "answers": [
+      [
+        "法的目的价值"
+      ],
+      [
+        "法的形式价值"
+      ],
+      [
+        "法的评价标准"
+      ],
+      [
+        "权限范围"
+      ],
+      [
+        "明确规定"
+      ],
+      [
+        "救济手段与程序"
+      ],
+      [
+        "自身和他人自由的责任"
+      ],
+      [
+        "最大限度的"
+      ],
+      [
+        "广泛的"
+      ],
+      [
+        "彼此相容的"
+      ],
+      [
+        "平等自由"
+      ],
+      [
+        "一般不干预"
+      ],
+      [
+        "有限的积极干预"
+      ],
+      [
+        "公共利益干预"
+      ]
+    ]
+  },
+  {
+    "id": "fl-五",
+    "subject": "法理学",
+    "chapter": "第五章 法的渊源与效力",
+    "question": "当代中国社会主义法的主要渊源：（1）【1】；（2）【2】；（3）【3】；（4）【4】；（5）【5】；（6）【6】；（7）【7】；（8）【8】；（9）【9】。\n\n法的效力等级一般遵循下列原则：（1）制定（认可）机关地位【10】，效力等级越高；（2）制定程序【11】，效力等级越高；（3）同一主体，【12】优于前法；（4）同一主体，特别法【13】一般法。",
+    "answers": [
+      [
+        "宪法"
+      ],
+      [
+        "法律"
+      ],
+      [
+        "行政法规"
+      ],
+      [
+        "行政规章"
+      ],
+      [
+        "军事法规与规章"
+      ],
+      [
+        "地方性法规"
+      ],
+      [
+        "自治法规"
+      ],
+      [
+        "特别行政区的法律、法规",
+        "特别行政区的法律,法规"
+      ],
+      [
+        "国际条约与协定"
+      ],
+      [
+        "越高"
+      ],
+      [
+        "越严格"
+      ],
+      [
+        "后法"
+      ],
+      [
+        "优于"
+      ]
+    ]
+  },
+  {
+    "id": "fl-六",
+    "subject": "法理学",
+    "chapter": "第六章 法律关系",
+    "question": "绝对法律关系：是【1】特定而义务主体【2】的法律关系。\n\n调整性法律关系：是基于人们的【3】产生的、发挥法的调整作用的法律关系。\n\n保护性法律关系：是由于【4】而产生的、旨在恢复破坏的权利和秩序的法律关系。\n\n隶属型法律关系：是一方当事人可依据【5】而直接要求他方当事人为或不为一定行为的法律关系。\n\n（按是否以意志转移）【6】：受主体意志支配，引发法律关系变动；【7】：客观发生，不受主体意志控制。",
+    "answers": [
+      [
+        "权利主体"
+      ],
+      [
+        "不特定"
+      ],
+      [
+        "合法行为"
+      ],
+      [
+        "违法行为"
+      ],
+      [
+        "职权"
+      ],
+      [
+        "法律行为"
+      ],
+      [
+        "法律事件"
+      ]
+    ]
+  },
+  {
+    "id": "fl-七",
+    "subject": "法理学",
+    "chapter": "第七章 法律行为",
+    "question": "表意行为：作出意思表示、法律后果依【1】而产生的行为。\n\n事实行为：是法律后果的产生【2】意思表示，而是行为自身作为一种事实引起法律规定的后果。\n\n要式行为：即需要符合特定的【3】才能产生法律效力的行为。",
+    "answers": [
+      [
+        "意思表示"
+      ],
+      [
+        "不是因为"
+      ],
+      [
+        "形式要件"
+      ]
+    ]
+  },
+  {
+    "id": "fl-八",
+    "subject": "法理学",
+    "chapter": "第八章 法律解释和法律推理",
+    "question": "法律解释的基本原则：（1）【1】原则；（2）【2】原则；（3）【3】原则；（4）【4】原则。\n\n扩大解释：在法律条文的字面含义显然比立法原意窄时，作出比【5】的解释。限制解释：在法律条文的字面含义显然比立法原意广时，作出比【6】的解释。",
+    "answers": [
+      [
+        "合法性"
+      ],
+      [
+        "统一性"
+      ],
+      [
+        "合理性"
+      ],
+      [
+        "连续性"
+      ],
+      [
+        "字面含义广"
+      ],
+      [
+        "字面含义窄"
+      ]
+    ]
+  },
+  {
+    "id": "fl-九",
+    "subject": "法理学",
+    "chapter": "第九章 法律责任",
+    "question": "法律责任：是指由于责任主体违反【1】而必须承担的具有直接【2】的特定义务。\n\n法律责任认定与归结的原则主要有：【3】原则、【4】原则、【5】原则和【6】原则。\n\n法律责任的承担主要通过两种方式实现：（1）【7】；（2）【8】。\n\n免责的条件和方式主要包括：【9】免责；【10】免责；【11】免责；【12】免责；【13】免责；【14】免责；【15】免责；【16】。",
+    "answers": [
+      [
+        "法定或约定的义务"
+      ],
+      [
+        "强制性"
+      ],
+      [
+        "责任法定"
+      ],
+      [
+        "因果关系"
+      ],
+      [
+        "责任相当"
+      ],
+      [
+        "责任公正"
+      ],
+      [
+        "惩罚"
+      ],
+      [
+        "补偿"
+      ],
+      [
+        "时效"
+      ],
+      [
+        "不诉"
+      ],
+      [
+        "自首、立功",
+        "自首,立功"
+      ],
+      [
+        "补救"
+      ],
+      [
+        "协议"
+      ],
+      [
+        "自助"
+      ],
+      [
+        "人道主义"
+      ],
+      [
+        "赦免"
+      ]
+    ]
+  },
+  {
+    "id": "fl-十",
+    "subject": "法理学",
+    "chapter": "第十章 立法",
+    "question": "中国社会主义立法的基本原则：（1）【1】原则；（2）【2】原则；（3）【3】原则。\n\n中国的立法程序（4个阶段）：法律案的【4】→法律案的【5】→法律案的【6】→法律的【7】。",
+    "answers": [
+      [
+        "民主"
+      ],
+      [
+        "法制统一"
+      ],
+      [
+        "科学"
+      ],
+      [
+        "提出"
+      ],
+      [
+        "审议"
+      ],
+      [
+        "表决"
+      ],
+      [
+        "公布"
+      ]
+    ]
+  },
+  {
+    "id": "fl-十一",
+    "subject": "法理学",
+    "chapter": "第十一章 中国社会主义法律实施",
+    "question": "法律实施（法的实施）是指法律规范的要求通过【1】、【2】、【3】等形式在社会生活中得以贯彻和实行的活动。\n\n法律执行（狭义），仅指国家【4】及其公职人员依法行使管理职权、履行职责、执行法律的活动。法律适用（狭义），专指国家【5】根据法定职权和法定程序，具体应用法律处理案件的专门活动。\n\n司法公正包括【6】和【7】。",
+    "answers": [
+      [
+        "法律执行"
+      ],
+      [
+        "法律适用"
+      ],
+      [
+        "法律遵守"
+      ],
+      [
+        "行政机关"
+      ],
+      [
+        "司法机关"
+      ],
+      [
+        "实体公正"
+      ],
+      [
+        "程序公正"
+      ]
+    ]
+  },
+  {
+    "id": "fl-十三",
+    "subject": "法理学",
+    "chapter": "第十三章 中国社会主义法与民主政治",
+    "question": "中国民主政治的基本制度：（1）【1】制度；（2）【2】制度；（3）【3】制度；（4）【4】制度。",
+    "answers": [
+      [
+        "人民代表大会"
+      ],
+      [
+        "中国共产党领导的多党合作和政治协商"
+      ],
+      [
+        "民族区域自治"
+      ],
+      [
+        "基层群众自治"
+      ]
+    ]
+  },
+  {
+    "id": "fl-十四",
+    "subject": "法理学",
+    "chapter": "第十四章 依法治国建设社会主义法治国家",
+    "question": "全面依法治国基本要求：（1）坚持【1】；（2）坚持【2】；（3）坚持【3】；（4）坚持【4】；（5）坚持【5】；（6）坚持【6】。",
+    "answers": [
+      [
+        "中国共产党的领导"
+      ],
+      [
+        "人民主体地位"
+      ],
+      [
+        "法律面前人人平等"
+      ],
+      [
+        "依法治国和以德治国相结合"
+      ],
+      [
+        "依法治国和依规治党有机统一"
+      ],
+      [
+        "从中国实际出发"
+      ]
+    ]
+  },
+  {
+    "id": "xfa-1",
+    "subject": "宪法学",
+    "chapter": "第一章 宪法基本理论",
+    "question": "宪法是确认一国民主制度、通过规范和控制国家权力以保障公民权利、具有最高效力的国家根本法。\n\n【宪法表现形式】\n【1】宪法：具有统一宪法典\n【2】宪法：没有统一宪法典\n\n【宪法的效力和修改程序】\n【3】宪法：制定或修改的程序更严格\n【4】宪法：制定、修改的机关和程序与一般法律相同，效力无差异\n\n【宪法制定主体的不同】\n【5】宪法：由君主或由君主的名义制定和颁布\n【6】宪法：由民意机关或全名公决制定\n【7】宪法：由君主和国民或国民代表机关协商制定\n\n宪法结构是指宪法内容的具体组织和排列形式。宪法结构是由宪法【8】、宪法【9】和【10】三部分组成。\n\n宪法规范是指调整宪法关系的各种规范的总称。特点：①【11】性；②【12】性；③【13】性;④【14】性与【15】性；⑤【16】性。\n\n宪法解释是指对宪法内容、含义及其界限所作的说明。从目前宪法解释的体制看，主要有三种类型：（1）【17】机关解释制（我国）；（2）【18】机关解释制；（3）【19】机关解释制。\n\n宪法的功能：【20】；【21】；【22】；【23】。\n\n宪法监督：是指【24】依据一定的程序，【25】法律、法规和行政命令等规范性文件和特定主体行为【26】，以【27】、【28】的制度。\n\n2018年第32修正案：指导思想部分在\"马克思列宁主义、毛泽东思想、邓小平理论、三个代表重要思想\"后增加\"科学发展观、习近平新时代中国特色社会主义思想\"；\"推动【29】、【30】、【31】、【32】、【33】协调发展，把我国建设成为【34】的社会主义现代化强国，实现中华民族伟大复兴\"。",
+    "answers": [
+      [
+        "成文"
+      ],
+      [
+        "不成文"
+      ],
+      [
+        "刚性"
+      ],
+      [
+        "柔性"
+      ],
+      [
+        "钦定"
+      ],
+      [
+        "民定"
+      ],
+      [
+        "协定"
+      ],
+      [
+        "序言"
+      ],
+      [
+        "正文"
+      ],
+      [
+        "附则"
+      ],
+      [
+        "政治"
+      ],
+      [
+        "组织性与限制"
+      ],
+      [
+        "最高"
+      ],
+      [
+        "稳定"
+      ],
+      [
+        "适应"
+      ],
+      [
+        "制裁"
+      ],
+      [
+        "立法"
+      ],
+      [
+        "司法"
+      ],
+      [
+        "特定"
+      ],
+      [
+        "确认功能"
+      ],
+      [
+        "保障功能"
+      ],
+      [
+        "限制功能"
+      ],
+      [
+        "协调功能"
+      ],
+      [
+        "特定的机关"
+      ],
+      [
+        "审查和裁决"
+      ],
+      [
+        "是否违反宪法"
+      ],
+      [
+        "维护宪法权威"
+      ],
+      [
+        "保障公民权利和自由"
+      ],
+      [
+        "物质文明"
+      ],
+      [
+        "政治文明"
+      ],
+      [
+        "精神文明"
+      ],
+      [
+        "社会文明"
+      ],
+      [
+        "生态文明"
+      ],
+      [
+        "富强民主文明和谐美丽"
+      ]
+    ]
+  },
+  {
+    "id": "xfa-2",
+    "subject": "宪法学",
+    "chapter": "第二章 中华人民共和国国家性质",
+    "question": "国家性质是指【1】，也就是通常所说的国体，即社会各阶级在国家中所处的地位，特别是掌握国家权力的统治阶级的性质和统治方式。\n\n【2】决定宪法性质，国家阶级统治者制定宪法，宪法进而确认、体现【3】。\n\n我国是【4】的社会主义国家。（对人民民主与对敌人专政）。\n\n我国社会主义经济制度的基础是生产资料的【5】。\n\n【6】指在劳动者个人占有生产资料的基础上，从事个体劳动和个体经营的私有制经济。\n\n【7】指以生产资料私有和雇工劳动为基础、以盈利为目的和按资分配为主的一种经济类型。\n\n国家【8】个体经济、私营经济等非公有制经济的合法的权利和利益。国家【9】、【10】和【11】非公有制经济的发展，并对非公有制经济依法实行监督和管理。非公有制经济是我国社会主义市场经济的【12】，非公有制经济已成为我国国民经济中一支不可缺少的力量。\n\n中国人民政治协商会议是【13】的爱国统一战线组织，是【14】的重要机构，是【15】的重要形式。\n\n新时期中国人民政治协商会议的主要任务：巩固和发展【16】，维护【17】的政治局面，促进【18】的发展，完成【19】大业，为维护世界和平作出新的贡献。\n\n中国人民政治协商会议的主要职能：【20】、【21】、【22】。\n\n我国是以【23】为领导核心的社会主义国家，实行中国共产党领导的【24】和【25】的政党制度，这是我国的一项基本政治制度。\n\n中国共产党对民主党派的基本方针：【26】，【27】，【28】，【29】。\n\n政体是指拥有国家主权的【30】实现其国家主权的宏观体制。\n\n政权组织形式是指实现国家权力的【31】以及各机关之间的相互关系。\n\n人民代表大会制度是指拥有国家权力的我国人民根据民主集中制原则，通过民主选举组成全国人民代表大会和地方各级人民代表大会，并以人民代表大会为基础，建立全部国家机构，【32】的政治制度。（人民行使国家权力的机关是【33】）\n\n人民代表大会制度的作用：①便于【34】；②便于【35】；③便于【36】；④既能【37】导，又能保证【38】。",
+    "answers": [
+      [
+        "国家的阶级本质"
+      ],
+      [
+        "国家性质"
+      ],
+      [
+        "国家性质"
+      ],
+      [
+        "人民民主专政"
+      ],
+      [
+        "社会主义公有制"
+      ],
+      [
+        "个体经济"
+      ],
+      [
+        "私营经济"
+      ],
+      [
+        "保护"
+      ],
+      [
+        "鼓励"
+      ],
+      [
+        "支持"
+      ],
+      [
+        "引导"
+      ],
+      [
+        "重要组成部分"
+      ],
+      [
+        "我国具有最广泛代表性"
+      ],
+      [
+        "实现中国共产党领导的多党合作和政治协商制度"
+      ],
+      [
+        "我国政治生活中发展社会主义民主"
+      ],
+      [
+        "爱国统一战线"
+      ],
+      [
+        "安定团结"
+      ],
+      [
+        "民主和法制建设"
+      ],
+      [
+        "祖国统一"
+      ],
+      [
+        "政治协商"
+      ],
+      [
+        "民主监督"
+      ],
+      [
+        "参政议政"
+      ],
+      [
+        "中国共产党"
+      ],
+      [
+        "多党合作"
+      ],
+      [
+        "政治协商"
+      ],
+      [
+        "长期共存"
+      ],
+      [
+        "互相监督"
+      ],
+      [
+        "肝胆相照"
+      ],
+      [
+        "荣辱与共"
+      ],
+      [
+        "统治阶级"
+      ],
+      [
+        "机关"
+      ],
+      [
+        "对人民负责，受人民监督，以实现人民当家作主",
+        "对人民负责,受人民监督,以实现人民当家作主"
+      ],
+      [
+        "全国人民代表大会和地方各级人民代表大会"
+      ],
+      [
+        "推进有中国特色社会主义的民主政治建设"
+      ],
+      [
+        "人民参加国家管理"
+      ],
+      [
+        "统一集中地行使国家权力"
+      ],
+      [
+        "保证中央的集中统一领"
+      ],
+      [
+        "地方主动性和积极性的发挥"
+      ]
+    ]
+  },
+  {
+    "id": "xfa-3",
+    "subject": "宪法学",
+    "chapter": "第三章 人民代表大会制度",
+    "question": "选举制度是一国统治阶级通过宪法和法律的规定关于选举【1】和【2】的各项制度的总称，是统治阶级挑选本阶级代表人物和优秀人物进入国家机关实现国家职能的重要手段和步骤。\n\n我国选举制度的基本原则：选举权的【3】原则；选举权的【4】原则；【5】与【6】并用的原则；【7】的原则；【8】原则。\n\n选举权的普遍性原则是就享有选举权的主体的广泛程度，是指除【9】、【10】、无精神病以及【11】，【12】的原则。\n\n我国公民享有选举权的基本条件：（1）具有【13】，是中华人民共和国公民；（2）年满【14】周岁；（3）依法享有【15】。\n\n选举权的平等性是指一切选民在每次选举中只能在一个地方投一次票，并且每一票的效力相等。\n\n直接选举是指选民【16】代议机关代表或议员、其他国家机关公职人员的选举方式。\n\n间接选举是指由选民【17】体，【18】代议机关代表和议员、其他国家机关公职人员的选举方式。\n\n我国选举活动的物质保障和法律保障：\n\n物质保障：\"全国人民代表大会和地方各级人民代表大会的选举经费，列入财政预算，由【19】开支。\"\n\n法律保障：《【20】》以专章规定了\"对破坏选举的制裁\"。对相应破坏选举的行为，依法给予治安管理处罚或行政处分，构成犯罪的，依法追究刑事责任。",
+    "answers": [
+      [
+        "代议机关代表"
+      ],
+      [
+        "国家公职人员"
+      ],
+      [
+        "普遍性"
+      ],
+      [
+        "平等性"
+      ],
+      [
+        "直接选举"
+      ],
+      [
+        "间接选举"
+      ],
+      [
+        "无记名投票"
+      ],
+      [
+        "差额选举"
+      ],
+      [
+        "国籍"
+      ],
+      [
+        "年龄"
+      ],
+      [
+        "未经依法剥夺政治权利外"
+      ],
+      [
+        "不另设其他资格限制而普遍享有选举权"
+      ],
+      [
+        "中国国籍"
+      ],
+      [
+        "18"
+      ],
+      [
+        "政治权利"
+      ],
+      [
+        "亲自投票选举"
+      ],
+      [
+        "选出选举人或选举团"
+      ],
+      [
+        "然后由选举人或选举团体再选出"
+      ],
+      [
+        "国库"
+      ],
+      [
+        "选举法"
+      ]
+    ]
+  },
+  {
+    "id": "xfa-4",
+    "subject": "宪法学",
+    "chapter": "第四章 民族区域自治制度与特别行政区制度",
+    "question": "国家结构形式是指国家整体与部分之间、中央与地方之间的【1】。国家结构形式主要有单一制和复合制两大类型。复合制主要有邦联制、联邦制两种形式。\n\n联邦制：指两个或多个成员国（共和国、州、邦等）组成的复合制国家。\n\n民族区域自治是指在中华人民共和国范围内，以【2】为基础，建立相应的【3】，并设立民族自治机关，行使宪法和法律规定的【4】的制度。\n\n民族自治地方是指我国境内少数民族聚居并实行区域自治的行政区域。\n\n民族自治机关自治权：①可结合本地特点，制定【5】、【6】；②结合本地实际，对上级不适宜规定，报批后可【7】；③享有地方【8】；④在国家规划下，自主管理本地经济建设；⑤经国务院批准，可组建地方治安公安部队；⑥自主使用、发展本地区【9】。\n\n【10】是指由民族自治地方的人民代表大会依据宪法和民族区域自治法制定的，有关本地区实行民族区域自治的基本制度。\n\n【11】是指民族自治地方的人民代表大会和它的常务委员会在自治权的范围内根据当地民族的政治、经济、文化等方面特点制定的关于某一方面的具体事项的规范性文件。\n\n特别行政区：是指在中华人民共和国范围内设立的享有特殊法律地位、实行资本主义制度和生活方式的【12】。特别行政区是中华人民共和国的地方一级行政区域，直辖于中央人民政府，中央人民政府与特别行政区的关系是【13】的关系，特别行政区不享有国家主权，没有外交和国防方面的权力，也不是一个独立的政治实体。\n\n中央对特别行政区享有的权力主要为：①负责管理与特别行政区有关的外交事务；②负责管理特别行政区的防务；③任命行政长官和主要官员；④决定特别行政区进入紧急状态；⑤解释特别行政区基本法；⑥修改特别行政区基本法。\n\n特别行政区实行高度自治，享有广泛的自治权。其所享有的高度自治权主要包括：【14】权、【15】权、独立的【16】权和【17】权、自行处理有关对外事务的权力、高度自治的其他方面。\n\n行政长官是【18】，代表特别行政区，对中央人民政府和特别行政区负责，也对立法会负责。",
+    "answers": [
+      [
+        "互相关系"
+      ],
+      [
+        "少数民族聚居区"
+      ],
+      [
+        "民族自治地方"
+      ],
+      [
+        "自治权"
+      ],
+      [
+        "自治条例"
+      ],
+      [
+        "单行条例"
+      ],
+      [
+        "变通或停止执行"
+      ],
+      [
+        "财政自治权"
+      ],
+      [
+        "民族语言文字"
+      ],
+      [
+        "自治条例"
+      ],
+      [
+        "单行条例"
+      ],
+      [
+        "地方行政区域"
+      ],
+      [
+        "中央与地方"
+      ],
+      [
+        "行政管理"
+      ],
+      [
+        "立法"
+      ],
+      [
+        "司法"
+      ],
+      [
+        "终审"
+      ],
+      [
+        "特别行政区的首长"
+      ]
+    ]
+  },
+  {
+    "id": "xfa-5",
+    "subject": "宪法学",
+    "chapter": "第五章 公民的基本权利与基本义务",
+    "question": "基本权利是通过宪法规范所确定的一种综合性的权利体系。\n\n平等权是指公民依法【1】，不受任何差别对待，要求国家给予平等保护的权利。\n\n政治权利：指公民依据宪法和法律的规定，【2】的可能性。包括：【3】（言论、出版、结社、集会、游行、示威）。\n\n【4】是指公民对于政治和社会的各项问题，有通过语言方式表达其思想和见解的自由。\n\n【5】是指公民可以通过公开发行的出版物，包括报纸、期刊、图书音像制品、电子出版物等，自由地表达自己对国家事务、经济和文化事业、社会事务的见解和看法。\n\n【6】是指公民为了一定的宗旨而依法律规定的程序组织某种社会组织的自由。\n\n【7】是指公民依据内心的信念，自愿地信仰宗教的自由。\n\n【8】是指公民的人身不受非法侵犯的自由，是公民参加国家政治生活、社会生活的基础，是以人身自由为基础建立起来的权利体系。\n\n人身自由的内容：【9】不受侵犯、【10】不受侵犯、【11】不受侵犯、【12】受法律保护。\n\n通信自由和通信秘密：中华人民共和国公民的通信自由和通信秘密受法律的保护。除因【13】或者追查【14】的需要，由【15】依照法律规定的程序对通信进行检查外，任何组织或者个人不得以任何理由侵犯公民的通信自由和通信秘密。\n\n【16】是指公民依照宪法的规定享有的具有物质经济利益的权利，是公民实现基本权利物质上的保障。\n\n我国公民基本义务：①维护【17】与【18】；②【19】宪法法律，【20】国家秘密，爱护公共财产，遵守劳动纪律、公共秩序与社会公德；③维护【21】、荣誉和利益；④保卫【22】，依法【23】、参加民兵组织；⑤依法【24】（税收特征：无偿性、固定性、强制性、平衡性）；⑥其他义务（劳动、受教育、计划生育；父母抚养未成年子女，成年子女赡养父母）。",
+    "answers": [
+      [
+        "平等地享有权利"
+      ],
+      [
+        "参加国家政治生活"
+      ],
+      [
+        "选举权、被选举权和政治自由",
+        "选举权,被选举权和政治自由",
+        "选举权、被选举权、政治自由"
+      ],
+      [
+        "言论自由"
+      ],
+      [
+        "出版自由"
+      ],
+      [
+        "结社自由"
+      ],
+      [
+        "宗教信仰自由"
+      ],
+      [
+        "人身自由"
+      ],
+      [
+        "人身自由"
+      ],
+      [
+        "人格尊严"
+      ],
+      [
+        "公民的住宅"
+      ],
+      [
+        "通信自由和通信秘密"
+      ],
+      [
+        "国家安全"
+      ],
+      [
+        "刑事犯罪"
+      ],
+      [
+        "公安机关或者检察机关"
+      ],
+      [
+        "社会经济权利"
+      ],
+      [
+        "国家统一"
+      ],
+      [
+        "民族团结"
+      ],
+      [
+        "遵守"
+      ],
+      [
+        "保守"
+      ],
+      [
+        "祖国安全"
+      ],
+      [
+        "祖国"
+      ],
+      [
+        "服兵役"
+      ],
+      [
+        "纳税"
+      ]
+    ]
+  },
+  {
+    "id": "xfa-6",
+    "subject": "宪法学",
+    "chapter": "第六章 国家机构",
+    "question": "全国人民代表大会是【1】机关和【2】机关。现阶段的全国人大由各省、自治区、直辖市、军队和特别行政区选出的代表组成，总人数不超过3000人，各少数民族都应当由适当的代表。\n\n全国人民代表大会常务委员会是全国人民代表大会的【3】；是我国【4】组成部分，是【5】机关。全国人大常委会是全国人大的一部分，是全国人大闭会期间的最高国家权力机关，同其他国家机关相比它处于最高的地位；同全国人大相比，它处于从属的地位。\n\n全国人大常委会由全国人大选举的【6】、【7】若干人、【8】、【9】若干人组成，其中应当有适当名额的少数民族代表。全国人大常委会组成人员不得担任国家行政机关、监察机关、审判机关和检察机关的职务。\n\n全国人大常委会主要职权：(1)解释宪法，监督宪法实施；(2)制定修改非基本法律；人大闭会期间，可部分修改全国人大法律，不得抵触其基本原则；(3)解释法律；(4)审查并撤销违宪违法的法规、规章等文件，监督其合宪性与合法性；(5)人大闭会期间，审批计划、预算的部分调整方案；(6)监督国务院、中央军委、国家监察委、最高法、最高检工作；(7)闭会期间行使最高国家机关领导人员任免权；(8)决定外交、特赦、紧急状态等国家重要事项；(9)行使全国人大授予的其他职权。\n\n全国人大代表是依照法律规定选举产生的【10】的组成人员。\n\n【11】，是省、自治区、直辖市，自治州、县、自治县、市、市辖区，乡、民族乡、镇各级行政区域内，人民行使国家权力的机关。\n\n国务院（中央人民政府）：是最高国家权力机关的【12】；是【13】机关。国务院由总理、副总理若干人、国务委员若干人、各部部长、各委员会主任、审计长、中国人民银行行长、秘书长组成。\n\n城市和农村按居民居住地区设立的居民委员会或者村民委员会是【14】。其主要任务是：①宣传守法，遵守公约，开展精神文明建设；②协助政府开展民政、卫生、就业、计生、青少年教育等工作；③调解民间纠纷，协助维护治安；④办理公共事务与公益事业，管理集体财产；⑤向上级机关反映群众意见与诉求。\n\n中央军事委员会是我国【15】机关，是全国武装力量的最高领导机关。中央军事委员会由主席、副主席若干人、委员若干人组成。\n\n监察委员会是【16】，是行使国家监察职能的专责机关。其核心职责是依照《监察法》对所有行使公权力的公职人员进行监察，调查职务违法和职务犯罪，开展廉政建设和反腐败工作。\n\n人民法院是我国的【17】机关，依法独立行使审判权，是我国国家机构的有机组成部分。我国人民法院的组织体系是：最高人民法院、地方各级人民法院、专门人民法院。地方各级人民法院分为【18】、【19】、【20】。\n\n人民检察院是我国的【21】机关，依法独立行使检察权。人民检察院职权（简记）：①对危害国家安全的重大刑事案件行使检察权；②对直接受理的刑事案件进行侦查；③审查公安机关侦查案件，决定捕诉，监督侦查活动；④提起公诉，监督法院审判，对错误裁判依法抗诉；⑤监督刑事判决执行及监狱、看守所的执法活动。",
+    "answers": [
+      [
+        "最高国家权力"
+      ],
+      [
+        "最高国家立法"
+      ],
+      [
+        "常设机关"
+      ],
+      [
+        "最高国家权力机关的"
+      ],
+      [
+        "国家立法"
+      ],
+      [
+        "委员长"
+      ],
+      [
+        "副委员长"
+      ],
+      [
+        "秘书长"
+      ],
+      [
+        "委员"
+      ],
+      [
+        "最高国家权力机关"
+      ],
+      [
+        "地方各级人民代表大会"
+      ],
+      [
+        "执行机关"
+      ],
+      [
+        "最高国家行政"
+      ],
+      [
+        "基层群众性自治组织"
+      ],
+      [
+        "最高国家军事"
+      ],
+      [
+        "国家的监察机关"
+      ],
+      [
+        "审判"
+      ],
+      [
+        "基层人民法院"
+      ],
+      [
+        "中级人民法院"
+      ],
+      [
+        "高级人民法院"
+      ],
+      [
+        "法律监督"
+      ]
+    ]
+  },
+  {
+    "id": "fz-一",
+    "subject": "法制史",
+    "chapter": "第一章 先秦时期的法律制度",
+    "question": "\"禹刑\"是【1】法律的总称；\"汤刑\"是【2】法律的总称。\n\n五刑是指：【3】刑、【4】刑、【5】刑、【6】刑、【7】五种刑罚。\n\n\"眚\"指【8】犯罪，\"非眚\"指【9】犯罪；\"非终\"指【10】，\"惟终\"指【11】。\n\n\"三赦之法\"：【12】、【13】、【14】这三种人如果触犯法律，应该减轻、赦免其刑罚。\n\n\"三宥之法\"：对于三种情况下的犯罪要宽宥、原谅，即【15】、【16】和【17】。\n\n\"质剂\"：是指西周的【18】契约。\"傅别\"：是指西周的【19】契约。\n\n\"七出\"是指：【20】去、【21】去、【22】去、【23】去、【24】去、【25】去、【26】去。\n\n\"三不去\"是指：【27】，不去；【28】，不去；【29】，不去。\n\n商鞅变法的主要内容：第一，【30】、扩充法律内容。第二，运用法律手段推行\"【31】\"政策。第三，用法律手段【32】特权。第四，全面贯彻法学派\"【33】\"、\"【34】\"等主张。",
+    "answers": [
+      [
+        "夏代"
+      ],
+      [
+        "商朝"
+      ],
+      [
+        "墨"
+      ],
+      [
+        "劓"
+      ],
+      [
+        "剕"
+      ],
+      [
+        "宫"
+      ],
+      [
+        "大辟"
+      ],
+      [
+        "过失"
+      ],
+      [
+        "故意"
+      ],
+      [
+        "偶犯"
+      ],
+      [
+        "惯犯"
+      ],
+      [
+        "幼弱"
+      ],
+      [
+        "老耄"
+      ],
+      [
+        "蠢愚"
+      ],
+      [
+        "过失"
+      ],
+      [
+        "弗知"
+      ],
+      [
+        "遗忘"
+      ],
+      [
+        "买卖"
+      ],
+      [
+        "借贷"
+      ],
+      [
+        "不顺父母"
+      ],
+      [
+        "无子"
+      ],
+      [
+        "淫"
+      ],
+      [
+        "妒"
+      ],
+      [
+        "恶疾"
+      ],
+      [
+        "多言"
+      ],
+      [
+        "盗窃"
+      ],
+      [
+        "有所娶而无所归"
+      ],
+      [
+        "与更三年丧"
+      ],
+      [
+        "前贫贱后富贵"
+      ],
+      [
+        "改法为律"
+      ],
+      [
+        "富国强兵"
+      ],
+      [
+        "剥夺贵族"
+      ],
+      [
+        "以法治国"
+      ],
+      [
+        "明法重刑"
+      ]
+    ]
+  },
+  {
+    "id": "fz-二",
+    "subject": "法制史",
+    "chapter": "第二章 秦代法律制度",
+    "question": "【1】是秦代官吏在回答法律问题时对现行法律法令的阐释和补充。【2】是秦代用来比照判案的成例。\n\n秦代定罪量刑的主要原则：（1）以【3】判断成年（男【4】寸、女【5】寸为成年）；（2）有无【6】影响定罪；（3）按客观危害【7】量刑；（4）【8】犯罪加重处罚；（5）【9】加重处罚；（6）【10】减轻处罚；（7）【11】反坐；（8）【12】原则。\n\n【13】是指\"贼杀伤、盗他人\"等危害统治秩序的犯罪，任何人都有权利和义务向官府告发。【14】是指\"子盗父母，父母擅杀、刑、髡子女及奴妾\"等家庭内部的侵害行为引发的诉讼形式。",
+    "answers": [
+      [
+        "法律答问"
+      ],
+      [
+        "廷行事"
+      ],
+      [
+        "身高"
+      ],
+      [
+        "六尺五"
+      ],
+      [
+        "六尺二"
+      ],
+      [
+        "犯罪意识"
+      ],
+      [
+        "后果"
+      ],
+      [
+        "共同"
+      ],
+      [
+        "累犯和教唆犯"
+      ],
+      [
+        "自首"
+      ],
+      [
+        "诬告"
+      ],
+      [
+        "连坐"
+      ],
+      [
+        "公室告"
+      ],
+      [
+        "非公室告"
+      ]
+    ]
+  },
+  {
+    "id": "fz-三",
+    "subject": "法制史",
+    "chapter": "第三章 汉代法律制度",
+    "question": "【1】是指当发生法律无明文规定的案件时，可比照最接近的律令条文，或比照同类典型判例处理。\n\n《九章律》是指汉代建立后，萧何根据刘邦的命令在\"法经\"和秦律六篇基础上，增加【2】三篇。\n\n【3】罪是指汉律规定，诸侯官吏与诸侯王结成一党构成的罪。【4】罪是指组织攻打监狱救出在押犯的犯罪。",
+    "answers": [
+      [
+        "决事比"
+      ],
+      [
+        "《户律》、《兴律》、《厩律》",
+        "《户律》《兴律》《厩律》",
+        "户律、兴律、厩律"
+      ],
+      [
+        "阿党附益"
+      ],
+      [
+        "篡囚"
+      ]
+    ]
+  },
+  {
+    "id": "fz-四",
+    "subject": "法制史",
+    "chapter": "第四章 三国、两晋、南北朝法律制度",
+    "question": "晋律（泰始律）以\"【1】\"为特点。后经张斐、杜预作注并具同等法律效力，故又称【2】。\n\n《北齐律》在中国立法史上第一次将《刑名》与《法例》合为一篇称为【3】。\n\n\"八议\"是【4】正式确立的对其时特权人物犯罪后实行【5】的法律规定。\n\n官当是允许官吏【6】的特权制度。重罪十条是【7】首次确立的。\n\n\"准五服以制罪\"，指九族以内的亲属之间相互侵害，依据五服所表示的【8】定罪量刑的制度。死刑复奏制度是指奏请【9】批准执行死刑判决的制度。",
+    "answers": [
+      [
+        "刑宽禁简"
+      ],
+      [
+        "张杜律"
+      ],
+      [
+        "《名例律》",
+        "名例律"
+      ],
+      [
+        "《魏律》",
+        "魏律"
+      ],
+      [
+        "减免处罚"
+      ],
+      [
+        "以官职爵位折抵徒刑"
+      ],
+      [
+        "《北齐律》",
+        "北齐律"
+      ],
+      [
+        "远近亲疏关系"
+      ],
+      [
+        "皇帝"
+      ]
+    ]
+  },
+  {
+    "id": "fz-五",
+    "subject": "法制史",
+    "chapter": "第五章 隋唐法律制度",
+    "question": "唐律五刑：【1】、【2】、【3】、【4】、【5】。\n\n唐代法律形式：【6】、【7】、【8】、【9】、【10】。\n\n唐律类推原则：法无明文断罪时，其应出罪者，则【11】；其应入罪者，则【12】。\n\n唐律的基本特点：（1）\"【13】\"；（2）【14】；（3）【15】。\n\n三司推事：指唐代由【16】、【17】和【18】组成临时最高法庭对其进行审理的一种制度。",
+    "answers": [
+      [
+        "死（斩+绞）",
+        "死"
+      ],
+      [
+        "流"
+      ],
+      [
+        "徒"
+      ],
+      [
+        "杖"
+      ],
+      [
+        "笞"
+      ],
+      [
+        "律"
+      ],
+      [
+        "令"
+      ],
+      [
+        "格"
+      ],
+      [
+        "式"
+      ],
+      [
+        "典"
+      ],
+      [
+        "举重以明轻"
+      ],
+      [
+        "举轻以明重"
+      ],
+      [
+        "礼法合一"
+      ],
+      [
+        "科条简要"
+      ],
+      [
+        "语言精确、立法技术高超",
+        "语言精确,立法技术高超"
+      ],
+      [
+        "刑部侍郎"
+      ],
+      [
+        "御史中丞"
+      ],
+      [
+        "大理寺卿"
+      ]
+    ]
+  },
+  {
+    "id": "fz-六",
+    "subject": "法制史",
+    "chapter": "第六章 宋元法律制度",
+    "question": "【1】：宋初规定的一种宽待死刑的刑罚制度，刺即刺面，配即流刑的配役。\n\n【2】：是为防止冤假错案而建立的复审制度，即在发生犯人推翻原有口供，且所翻情节实属重罪时，案件必须重新审理。\n\n【3】是历史上【4】雕版印行的法典。【5】是元代立国后第一部成文法的汇编。",
+    "answers": [
+      [
+        "刺配刑"
+      ],
+      [
+        "翻异别勘制度",
+        "翻异别勘"
+      ],
+      [
+        "《宋刑统》",
+        "宋刑统"
+      ],
+      [
+        "第一部"
+      ],
+      [
+        "《至元新格》",
+        "至元新格"
+      ]
+    ]
+  },
+  {
+    "id": "fz-七",
+    "subject": "法制史",
+    "chapter": "第七章 明代法律制度",
+    "question": "【1】是指明代创设的一种新的刑罚，即强迫犯人到边远地区服苦役。枷号是指明代创设的【2】。奸党罪是指为朱元璋洪武年间所创设，用以惩办【3】危害皇权统治的犯罪。\n\n\"三司会审\"：明代创设，由【4】、【5】、【6】三法司会同审问罪犯。",
+    "answers": [
+      [
+        "充军刑"
+      ],
+      [
+        "耻辱刑"
+      ],
+      [
+        "官吏结党"
+      ],
+      [
+        "刑部"
+      ],
+      [
+        "大理寺"
+      ],
+      [
+        "都察院"
+      ]
+    ]
+  },
+  {
+    "id": "fz-八",
+    "subject": "法制史",
+    "chapter": "第八章 清代法律制度",
+    "question": "【1】乾隆年间颁行，以明律为基础修订，是中国历史上最后一部综合性封建成文法典。\n\n朝审：是对刑部判决的重案及京师附近绞斩监候案件进行的复审，时间【2】秋审。结果分情实、缓决、可矜、留养承祀。",
+    "answers": [
+      [
+        "《大清律例》",
+        "大清律例"
+      ],
+      [
+        "晚于"
+      ]
+    ]
+  },
+  {
+    "id": "fz-九",
+    "subject": "法制史",
+    "chapter": "第九章 清末法律制度的变革",
+    "question": "\"十九信条\"全称《宪法重大信条十九条》，是清政府于武昌起义爆发以后抛出的一个【1】，也是清朝统治集团颁布的【2】。\n\n资政院：是清末\"预备立宪\"时期清廷设立的【3】。咨议局：是清末\"预备立宪\"时期清廷设立的【4】。\n\n《大清民律草案》是清廷于1911年8月完成的中国历史上第一部专门的民法典草案。【5】由日本法学家起草；【6】由礼学馆参与制定。",
+    "answers": [
+      [
+        "应急性宪法文件"
+      ],
+      [
+        "最后一个宪法性文件"
+      ],
+      [
+        "中央咨询机构"
+      ],
+      [
+        "地方咨议机关"
+      ],
+      [
+        "总则、债权、物权",
+        "总则,债权,物权"
+      ],
+      [
+        "亲属、继承",
+        "亲属,继承"
+      ]
+    ]
+  },
+  {
+    "id": "fz-十",
+    "subject": "法制史",
+    "chapter": "第十章 中华民国南京临时政府的法律制度",
+    "question": "《中华民国临时约法》作为中国历史上【1】，在全国人民面前树立起\"【2】\"\"【3】\"的形象。",
+    "answers": [
+      [
+        "第一部资产阶级共和国性质的宪法文件"
+      ],
+      [
+        "民主"
+      ],
+      [
+        "共和"
+      ]
+    ]
+  },
+  {
+    "id": "mf-一",
+    "subject": "民法",
+    "chapter": "第一章 民法概述",
+    "question": "平等原则是指民事主体在民事活动中的【1】。主要体现在：【2】平等；【3】平等；【4】。\n\n诚实信用原则，是指民事主体从事民事活动时，应当【5】，正当行使民事权利并履行民事义务。\n\n绿色原则是指民事主体从事民事活动，应当【6】，【7】。\n\n民事权利按作用分类：【8】权（直接管，排除他人）；【9】权（要求别人做/不做）；【10】权（拒绝/对抗对方请求）；【11】权（单方意思改关系）。\n\n民事权利的国家保护即【12】；民事权利的自我保护即【13】，包括自卫行为和自助行为两种情形。",
+    "answers": [
+      [
+        "法律地位一律平等"
+      ],
+      [
+        "民事权利能力"
+      ],
+      [
+        "民事主体地位"
+      ],
+      [
+        "民事权益平等地受法律保护"
+      ],
+      [
+        "诚实守信"
+      ],
+      [
+        "有利于节约资源"
+      ],
+      [
+        "保护生态环境"
+      ],
+      [
+        "支配"
+      ],
+      [
+        "请求"
+      ],
+      [
+        "抗辩"
+      ],
+      [
+        "形成"
+      ],
+      [
+        "公力救济"
+      ],
+      [
+        "私力救济"
+      ]
+    ]
+  },
+  {
+    "id": "mf-二",
+    "subject": "民法",
+    "chapter": "第二章 自然人",
+    "question": "自然人的民事权利能力始于【1】，终于【2】。\n\n胎儿利益保护：涉及【3】、【4】等胎儿利益保护的，胎儿视为【5】民事权利能力。但是胎儿【6】，其民事权利能力自始不存在。\n\n完全民事行为能力主体：【7】周岁以上；【8】周岁以劳动收入为主要生活来源，且能维持当地一般生活水平。\n\n无民事行为能力主体：不满【9】周岁未成年人；【10】周岁以上不能辨认自身行为的未成年人；不能辨认自身行为的成年人。\n\n监护人职责（简记口诀）：保健康，照生活，管教育，管【11】，代【12】，代【13】，担【14】。\n\n宣告死亡的法律后果：①被宣告死亡人现存民事法律关系【15】，民事权利和行为能力【16】；婚姻关系【17】，个人【18】继承。②被宣告死亡但实际未死亡的，其在该期间实施的民事法律行为【19】。",
+    "answers": [
+      [
+        "出生"
+      ],
+      [
+        "死亡"
+      ],
+      [
+        "遗产继承"
+      ],
+      [
+        "接受赠与"
+      ],
+      [
+        "具有"
+      ],
+      [
+        "娩出时为死体的"
+      ],
+      [
+        "18"
+      ],
+      [
+        "16-18",
+        "16到18"
+      ],
+      [
+        "8"
+      ],
+      [
+        "8"
+      ],
+      [
+        "财产"
+      ],
+      [
+        "民事"
+      ],
+      [
+        "诉讼"
+      ],
+      [
+        "责任"
+      ],
+      [
+        "消灭"
+      ],
+      [
+        "终止"
+      ],
+      [
+        "解除"
+      ],
+      [
+        "财产作为遗产"
+      ],
+      [
+        "有效"
+      ]
+    ]
+  },
+  {
+    "id": "mf-四",
+    "subject": "民法",
+    "chapter": "第四章 民事法律行为",
+    "question": "诺成性法律行为是指【1】标的物，仅以意思表示为成立要件的法律行为。实践性法律行为是指除当事人意思表示一致外【2】标的物才能成立的民事法律行为。\n\n民事法律行为生效要件实质要件：①行为人具有【3】；②【4】；③【5】法律、行政法规的强制性规定，【6】公序良俗。\n\n可撤销的民事法律行为种类：①【7】的民事行为；②【8】的民事行为；③【9】、【10】而订立不损害国家利益的合同行为。",
+    "answers": [
+      [
+        "不需交付"
+      ],
+      [
+        "还须交付"
+      ],
+      [
+        "相应的民事行为能力"
+      ],
+      [
+        "意思表示真实"
+      ],
+      [
+        "不违反"
+      ],
+      [
+        "不违背"
+      ],
+      [
+        "重大误解"
+      ],
+      [
+        "显失公平"
+      ],
+      [
+        "受欺诈"
+      ],
+      [
+        "胁迫"
+      ]
+    ]
+  },
+  {
+    "id": "mf-五",
+    "subject": "民法",
+    "chapter": "第五章 代理",
+    "question": "委托代理（意定代理）是指基于【1】而发生的代理。法定代理是指代理权基于【2】。\n\n表见代理构成要件：①须行为人【3】；②须有使相对人相信行为人具有代理权的【4】；③须相对人为【5】；④须行为人与相对人之间的行为具备民事法律行为的【6】。",
+    "answers": [
+      [
+        "被代理人授权的意思表示"
+      ],
+      [
+        "法律的规定"
+      ],
+      [
+        "无代理权"
+      ],
+      [
+        "事实或者理由"
+      ],
+      [
+        "善意"
+      ],
+      [
+        "有效要件"
+      ]
+    ]
+  },
+  {
+    "id": "mf-六",
+    "subject": "民法",
+    "chapter": "第六章 人身权",
+    "question": "处理个人信息应当遵循【1】、【2】、【3】原则，【4】，并应：（1）【5】该自然人或其监护人【6】；（2）【7】处理信息的【8】；（3）【9】处理信息的【10】、方式和范围；（4）【11】法律、行政法规的规定和双方的约定。\n\n身份权包括：【12】、【13】、【14】。",
+    "answers": [
+      [
+        "合法"
+      ],
+      [
+        "正当"
+      ],
+      [
+        "必要"
+      ],
+      [
+        "不得过度处理"
+      ],
+      [
+        "征得"
+      ],
+      [
+        "同意"
+      ],
+      [
+        "公开"
+      ],
+      [
+        "规则"
+      ],
+      [
+        "明示"
+      ],
+      [
+        "目的"
+      ],
+      [
+        "不违反"
+      ],
+      [
+        "亲权"
+      ],
+      [
+        "亲属权"
+      ],
+      [
+        "配偶权"
+      ]
+    ]
+  },
+  {
+    "id": "mf-七",
+    "subject": "民法",
+    "chapter": "第七章 诉讼时效",
+    "question": "诉讼时效中止事由：①【1】；②无民事行为能力人或者限制民事行为能力人【2】，或【3】死亡、丧失民事行为能力、丧失代理权；③继承开始后【4】继承人或者遗产管理人；④权利人【5】义务人或其他人【6】；⑤【7】导致权利人不能行使请求权的障碍。\n\n诉讼时效中断的法定事由：①权利人【8】履行请求；②义务人【9】义务；③权利人【10】或者【11】；④与提起诉讼或者申请仲裁具有同等效力的【12】。\n\n发生时效中止的时间：在诉讼时效期间的【13】才发生诉讼时效的中止。",
+    "answers": [
+      [
+        "不可抗力"
+      ],
+      [
+        "没有法定代理人"
+      ],
+      [
+        "法定代理人"
+      ],
+      [
+        "未确定"
+      ],
+      [
+        "被"
+      ],
+      [
+        "控制"
+      ],
+      [
+        "其他"
+      ],
+      [
+        "向义务人提出"
+      ],
+      [
+        "同意履行"
+      ],
+      [
+        "提起诉讼"
+      ],
+      [
+        "申请仲裁"
+      ],
+      [
+        "其他情形"
+      ],
+      [
+        "最后6个月内",
+        "最后六个月内"
+      ]
+    ]
+  },
+  {
+    "id": "mf-八",
+    "subject": "民法",
+    "chapter": "第八章 物权概述",
+    "question": "特殊的登记制度：【1】登记；【2】登记；【3】登记。动产交付的方式：【4】交付；【5】交付（【6】交付、【7】交付、占有改定）。\n\n物权请求权包括：（1）【8】请求权；（2）排除【9】请求权；（3）消除【10】请求权；（4）【11】、【12】、【13】或者【14】请求权。",
+    "answers": [
+      [
+        "更正"
+      ],
+      [
+        "异议"
+      ],
+      [
+        "预告"
+      ],
+      [
+        "现实"
+      ],
+      [
+        "观念"
+      ],
+      [
+        "简易"
+      ],
+      [
+        "指示"
+      ],
+      [
+        "原物返还"
+      ],
+      [
+        "妨害"
+      ],
+      [
+        "危险"
+      ],
+      [
+        "修理"
+      ],
+      [
+        "重作"
+      ],
+      [
+        "更换"
+      ],
+      [
+        "恢复原状"
+      ]
+    ]
+  },
+  {
+    "id": "mf-九",
+    "subject": "民法",
+    "chapter": "第九章 所有权",
+    "question": "所有权人对自己的不动产或者动产，依法享有【1】、【2】、【3】和【4】的权利。\n\n善意取得的要件：①出让人构成【5】；②受让人取得该动产或不动产时是【6】；③以【7】有偿转让；④完成了【8】；⑤转让合同【9】。\n\n处理相邻关系的原则：不动产相邻权利人应当按照【10】、【11】、【12】、【13】，正确处理相邻关系。",
+    "answers": [
+      [
+        "占有"
+      ],
+      [
+        "使用"
+      ],
+      [
+        "收益"
+      ],
+      [
+        "处分"
+      ],
+      [
+        "无权处分"
+      ],
+      [
+        "善意的"
+      ],
+      [
+        "合理的价格"
+      ],
+      [
+        "法定的公示方法"
+      ],
+      [
+        "未被宣告无效或被撤销"
+      ],
+      [
+        "有利生产"
+      ],
+      [
+        "方便生活"
+      ],
+      [
+        "团结互助"
+      ],
+      [
+        "公平合理的原则"
+      ]
+    ]
+  },
+  {
+    "id": "mf-十",
+    "subject": "民法",
+    "chapter": "第十章 用益物权",
+    "question": "用益物权包括了【1】、【2】、【3】、【4】和【5】。",
+    "answers": [
+      [
+        "土地承包经营权"
+      ],
+      [
+        "建设用地使用权"
+      ],
+      [
+        "宅基地使用权"
+      ],
+      [
+        "居住权"
+      ],
+      [
+        "地役权"
+      ]
+    ]
+  },
+  {
+    "id": "mf-十一",
+    "subject": "民法",
+    "chapter": "第十一章 担保物权",
+    "question": "担保物权的特性：【1】；【2】；【3】。\n\n留置权积极要件：①【4】合法【5】债务人动产；②【6】已到期；③留置的动产与债权属【7】（企业间除外）。",
+    "answers": [
+      [
+        "从属性"
+      ],
+      [
+        "不可分性"
+      ],
+      [
+        "物上代位性"
+      ],
+      [
+        "债权人"
+      ],
+      [
+        "占有"
+      ],
+      [
+        "债权"
+      ],
+      [
+        "同一法律关系"
+      ]
+    ]
+  },
+  {
+    "id": "mf-十二",
+    "subject": "民法",
+    "chapter": "第十二章 债的一般原理",
+    "question": "不当得利构成要件（简记）：①一方【1】；②另一方【2】；③获利与受损有【3】；④获得利益【4】法律上的根据。\n\n无因管理指【5】或者【6】义务，为【7】而进行管理或者服务的行为。",
+    "answers": [
+      [
+        "获得利益"
+      ],
+      [
+        "受到损失"
+      ],
+      [
+        "因果关系"
+      ],
+      [
+        "没有"
+      ],
+      [
+        "没有法定的"
+      ],
+      [
+        "约定的"
+      ],
+      [
+        "避免他人利益受损失"
+      ]
+    ]
+  },
+  {
+    "id": "mf-十三",
+    "subject": "民法",
+    "chapter": "第十三章 合同法总论",
+    "question": "双务合同履行中的抗辩权主要包括【1】、【2】、【3】三种。\n\n缔约过失责任是指在【4】中，一方【5】其基于诚实信用原则所应负的【6】，导致合同不成立、无效或被撤销，由此给他方造成信赖利益的损失，【7】依法应承担赔偿责任。\n\n违约的免责情形：【8】；【9】条款及【10】事由出现；【11】的过错。",
+    "answers": [
+      [
+        "同时履行抗辩权"
+      ],
+      [
+        "不安抗辩权"
+      ],
+      [
+        "先履行抗辩权"
+      ],
+      [
+        "合同订立过程"
+      ],
+      [
+        "因过错而违背"
+      ],
+      [
+        "先合同义务"
+      ],
+      [
+        "过错一方"
+      ],
+      [
+        "不可抗力"
+      ],
+      [
+        "免责"
+      ],
+      [
+        "免责"
+      ],
+      [
+        "当事人"
+      ]
+    ]
+  },
+  {
+    "id": "mf-十五",
+    "subject": "民法",
+    "chapter": "第十五章 知识产权概述",
+    "question": "知识产权特征（简记）：【1】（看不见摸不着）；【2】（效力只限于本国境内）；【3】（过期自由使用）；【4】（独占性、排他性）。",
+    "answers": [
+      [
+        "客体的无形性"
+      ],
+      [
+        "地域性"
+      ],
+      [
+        "时间性"
+      ],
+      [
+        "专有性"
+      ]
+    ]
+  },
+  {
+    "id": "mf-十六",
+    "subject": "民法",
+    "chapter": "第十六章 著作权法",
+    "question": "合理使用必须符合下列条件：（1）【1】；（2）只能针对【2】；（3）【3】，不得不合理地损害著作权人的合法权益。",
+    "answers": [
+      [
+        "指明作者姓名、作品名称",
+        "指明作者姓名,作品名称"
+      ],
+      [
+        "已经发表的作品"
+      ],
+      [
+        "不得与作品的正常使用相冲突"
+      ]
+    ]
+  },
+  {
+    "id": "mf-十七",
+    "subject": "民法",
+    "chapter": "第十七章 专利法",
+    "question": "授予专利权的发明和实用新型，应当具备【1】性、【2】性和【3】性，3个实质条件。\n\n专利申请的原则：①【4】原则；②【5】原则；③【6】原则。\n\n强制许可类型：①【7】；②【8】；③【9】；④【10】；⑤【11】。",
+    "answers": [
+      [
+        "新颖"
+      ],
+      [
+        "创造"
+      ],
+      [
+        "实用"
+      ],
+      [
+        "先申请"
+      ],
+      [
+        "一申请一发明"
+      ],
+      [
+        "书面申请"
+      ],
+      [
+        "不实施强制许可"
+      ],
+      [
+        "反垄断强制许可"
+      ],
+      [
+        "紧急状态或为公共利益强制许可"
+      ],
+      [
+        "药品强制许可"
+      ],
+      [
+        "从属专利强制许可"
+      ]
+    ]
+  },
+  {
+    "id": "mf-十八",
+    "subject": "民法",
+    "chapter": "第十八章 商标法",
+    "question": "商标权具体内容包括：【1】、【2】、【3】、【4】以及【5】。注册商标的有效期为【6】年，自【7】起计算。",
+    "answers": [
+      [
+        "使用权"
+      ],
+      [
+        "禁止权"
+      ],
+      [
+        "转让权"
+      ],
+      [
+        "许可权"
+      ],
+      [
+        "续展权"
+      ],
+      [
+        "十"
+      ],
+      [
+        "核准注册之日"
+      ]
+    ]
+  },
+  {
+    "id": "mf-二十",
+    "subject": "民法",
+    "chapter": "第二十章 法定继承",
+    "question": "法定继承第一顺序法定继承人是：【1】，【2】，【3】，对公婆或岳父岳母尽了主要赡养义务的丧偶儿媳或丧偶女婿。法定继承第二顺序法定继承人是：【4】，【5】。\n\n转继承是指【6】，继承人于【7】前死亡，并【8】继承的，其所应继承的遗产份额的权利转由其继承人继承的法律制度。",
+    "answers": [
+      [
+        "配偶"
+      ],
+      [
+        "子女"
+      ],
+      [
+        "父母"
+      ],
+      [
+        "兄弟姐妹"
+      ],
+      [
+        "祖父母、外祖父母",
+        "祖父母,外祖父母"
+      ],
+      [
+        "继承开始后"
+      ],
+      [
+        "遗产分割"
+      ],
+      [
+        "没有放弃"
+      ]
+    ]
+  },
+  {
+    "id": "mf-二十二",
+    "subject": "民法",
+    "chapter": "第二十二章 遗产的处理",
+    "question": "死亡推定规则：相互有继承关系的数人在同一事件中死亡，难以确定死亡时间的，推定【1】先死亡。都有其他继承人，辈分不同的，推定【2】先死亡；辈分相同的，推定【3】，相互不发生继承。",
+    "answers": [
+      [
+        "没有其他继承人的人"
+      ],
+      [
+        "长辈"
+      ],
+      [
+        "同时死亡"
+      ]
+    ]
+  },
+  {
+    "id": "mf-二十四",
+    "subject": "民法",
+    "chapter": "第二十四章 一般侵权行为的民事责任",
+    "question": "不承担责任和减轻责任的情形：【1】；【2】；【3】；【4】；【5】；【6】；自甘风险和自助行为。\n\n不可抗力是指【7】、【8】和【9】的客观情况。",
+    "answers": [
+      [
+        "受害人的故意与过失"
+      ],
+      [
+        "第三人的行为"
+      ],
+      [
+        "不可抗力"
+      ],
+      [
+        "正当防卫"
+      ],
+      [
+        "紧急避险"
+      ],
+      [
+        "见义勇为行为"
+      ],
+      [
+        "不能预见"
+      ],
+      [
+        "不能避免"
+      ],
+      [
+        "不能克服"
+      ]
+    ]
+  },
+  {
+    "id": "mf-二十六",
+    "subject": "民法",
+    "chapter": "第二十六章 特殊侵权的民事责任",
+    "question": "产品责任主张减轻或免除责任的事由：①【1】；②【2】；③【3】；④【4】。",
+    "answers": [
+      [
+        "受害人的故意或重大过失"
+      ],
+      [
+        "非正常使用或错误使用"
+      ],
+      [
+        "产品已过有效期"
+      ],
+      [
+        "不能发现的潜在危险"
+      ]
+    ]
+  },
+  {
+    "id": "xf-一",
+    "subject": "刑法",
+    "chapter": "第一章 刑法概述",
+    "question": "【1】刑法是指一切规定犯罪、刑事责任和刑罚的法律规范的总和。【2】刑法即指系统规定犯罪、刑事责任和刑罚的刑法典。\n\n刑法的机能：①【3】机能；②【4】机能；③【5】机能。\n\n刑法的解释分类：①根据解释的效力不同，分为：【6】、【7】和【8】；②按照解释的方法不同，分为：【9】与【10】。",
+    "answers": [
+      [
+        "广义"
+      ],
+      [
+        "狭义"
+      ],
+      [
+        "行为规制"
+      ],
+      [
+        "法益保护"
+      ],
+      [
+        "自由保障"
+      ],
+      [
+        "立法解释"
+      ],
+      [
+        "司法解释"
+      ],
+      [
+        "学理解释"
+      ],
+      [
+        "文理解释"
+      ],
+      [
+        "论理解释"
+      ]
+    ]
+  },
+  {
+    "id": "xf-二",
+    "subject": "刑法",
+    "chapter": "第二章 刑法的基本原则",
+    "question": "我国刑法的3项基本原则，即【1】原则、【2】原则和【3】原则。\n\n罪刑法定原则基本要求：【4】化；【5】化；【6】化。",
+    "answers": [
+      [
+        "罪刑法定"
+      ],
+      [
+        "刑法适用平等"
+      ],
+      [
+        "罪责刑相适应"
+      ],
+      [
+        "法定"
+      ],
+      [
+        "实定"
+      ],
+      [
+        "明确"
+      ]
+    ]
+  },
+  {
+    "id": "xf-三",
+    "subject": "刑法",
+    "chapter": "第三章 刑法的效力范围",
+    "question": "各国刑法主要存在以下几种原则：①【1】原则；②【2】原则；③【3】原则；④【4】原则。\n\n刑法的溯及力：各国大致有以下几种：①【5】原则；②【6】原则；③【7】原则；④【8】原则。我国刑法采用【9】原则。",
+    "answers": [
+      [
+        "属地"
+      ],
+      [
+        "属人"
+      ],
+      [
+        "保护"
+      ],
+      [
+        "普遍管辖"
+      ],
+      [
+        "从旧"
+      ],
+      [
+        "从新"
+      ],
+      [
+        "从新兼从轻"
+      ],
+      [
+        "从旧兼从轻"
+      ],
+      [
+        "从旧兼从轻"
+      ]
+    ]
+  },
+  {
+    "id": "xf-四",
+    "subject": "刑法",
+    "chapter": "第四章 犯罪与刑事责任",
+    "question": "犯罪的基本特征：①【1】；②【2】；③【3】。",
+    "answers": [
+      [
+        "严重的社会危害性"
+      ],
+      [
+        "刑事违法性"
+      ],
+      [
+        "应受刑罚惩罚性"
+      ]
+    ]
+  },
+  {
+    "id": "xf-五",
+    "subject": "刑法",
+    "chapter": "第五章 犯罪客体",
+    "question": "犯罪客体可以分为：①【1】；②【2】；③【3】。",
+    "answers": [
+      [
+        "一般客体"
+      ],
+      [
+        "同类客体"
+      ],
+      [
+        "直接客体"
+      ]
+    ]
+  },
+  {
+    "id": "xf-六",
+    "subject": "刑法",
+    "chapter": "第六章 犯罪客观方面",
+    "question": "犯罪客观方面的事实特征有：【1】、【2】、【3】、【4】、时间、地点等。其中【5】是一切犯罪的必备要件。\n\n危害行为基本形式概括为：【6】和【7】。",
+    "answers": [
+      [
+        "危害行为"
+      ],
+      [
+        "犯罪对象"
+      ],
+      [
+        "危害结果"
+      ],
+      [
+        "犯罪的方法"
+      ],
+      [
+        "危害行为"
+      ],
+      [
+        "作为"
+      ],
+      [
+        "不作为"
+      ]
+    ]
+  },
+  {
+    "id": "xf-七",
+    "subject": "刑法",
+    "chapter": "第七章 犯罪主体",
+    "question": "刑事责任能力包括【1】和【2】，二者不可或缺。\n\n我国精神障碍人的刑事责任能力分三类：【3】刑事责任的精神病人、【4】刑事责任的精神障碍人和【5】刑事责任的精神障碍人。",
+    "answers": [
+      [
+        "辨认能力"
+      ],
+      [
+        "控制能力"
+      ],
+      [
+        "完全无"
+      ],
+      [
+        "完全负"
+      ],
+      [
+        "限制"
+      ]
+    ]
+  },
+  {
+    "id": "xf-八",
+    "subject": "刑法",
+    "chapter": "第八章 犯罪主观方面",
+    "question": "犯罪故意由两种因素构成，即【1】（明知行为会发生危害）和【2】（希望或放任危害发生）。\n\n犯罪过失的两种基本类型：【3】的过失和【4】的过失。\n\n事实认识错误有以下：【5】错误；【6】错误；【7】错误；【8】错误。",
+    "answers": [
+      [
+        "认识因素"
+      ],
+      [
+        "意志因素"
+      ],
+      [
+        "疏忽大意"
+      ],
+      [
+        "过于自信"
+      ],
+      [
+        "客体"
+      ],
+      [
+        "对象"
+      ],
+      [
+        "行为认识"
+      ],
+      [
+        "因果关系"
+      ]
+    ]
+  },
+  {
+    "id": "xf-九",
+    "subject": "刑法",
+    "chapter": "第九章 故意犯罪的停止形态",
+    "question": "犯罪既遂主要有【1】、【2】、【3】三种类型。\n\n犯罪中止的特征：（1）【4】；（2）【5】；（3）【6】。自动有效防止犯罪结果发生还需具备【7】。\n\n中止犯的处罚原则：对于中止犯，没有造成损害的，【8】处罚；造成损害的，【9】处罚。\n\n预备犯的处罚原则：对于预备犯，【10】比照既遂犯【11】、【12】处罚或者【13】处罚。未遂犯的处罚原则：对于未遂犯，【14】比照既遂犯【15】或者【16】处罚。",
+    "answers": [
+      [
+        "结果犯"
+      ],
+      [
+        "行为犯"
+      ],
+      [
+        "危险犯"
+      ],
+      [
+        "时空性"
+      ],
+      [
+        "自动性"
+      ],
+      [
+        "彻底性"
+      ],
+      [
+        "有效性"
+      ],
+      [
+        "应当免除"
+      ],
+      [
+        "应当减轻"
+      ],
+      [
+        "可以"
+      ],
+      [
+        "从轻"
+      ],
+      [
+        "减轻"
+      ],
+      [
+        "免除"
+      ],
+      [
+        "可以"
+      ],
+      [
+        "从轻"
+      ],
+      [
+        "减轻"
+      ]
+    ]
+  },
+  {
+    "id": "xf-十",
+    "subject": "刑法",
+    "chapter": "第十章 共同犯罪",
+    "question": "我国刑法以\"作用为主、分工为辅\"，将共同犯罪人分为：【1】、【2】、【3】和【4】。\n\n教唆不满18周岁的人犯罪，应当【5】处罚；如果被教唆的人没有犯被教唆的罪，对于教唆犯，【6】从轻或者【7】处罚。",
+    "answers": [
+      [
+        "主犯"
+      ],
+      [
+        "从犯"
+      ],
+      [
+        "胁从犯"
+      ],
+      [
+        "教唆犯"
+      ],
+      [
+        "从重"
+      ],
+      [
+        "可以"
+      ],
+      [
+        "减轻"
+      ]
+    ]
+  },
+  {
+    "id": "xf-十一",
+    "subject": "刑法",
+    "chapter": "第十一章 一罪与数罪",
+    "question": "实质的一罪：【1】、【2】、【3】。处断的一罪：【4】、【5】和【6】。",
+    "answers": [
+      [
+        "想象竞合犯"
+      ],
+      [
+        "结果加重犯"
+      ],
+      [
+        "继续犯"
+      ],
+      [
+        "连续犯"
+      ],
+      [
+        "牵连犯"
+      ],
+      [
+        "吸收犯"
+      ]
+    ]
+  },
+  {
+    "id": "xf-十二",
+    "subject": "刑法",
+    "chapter": "第十二章 正当防卫与紧急避险",
+    "question": "防卫过当的刑事责任：【1】或者【2】处罚。",
+    "answers": [
+      [
+        "应当减轻"
+      ],
+      [
+        "免除"
+      ]
+    ]
+  },
+  {
+    "id": "xf-十四",
+    "subject": "刑法",
+    "chapter": "第十四章 刑罚的体系和种类",
+    "question": "我国刑罚主刑：【1】、【2】、【3】、【4】、【5】。附加刑：【6】、【7】、【8】以及【9】。\n\n管制的刑期：判决执行以前先行羁押的，羁押1日折抵刑期【10】日。拘役的刑期：判决执行以前先行羁押的，羁押1日折抵刑期【11】日。\n\n我国的基本死刑政策：\"【12】，【13】\"。\n\n死缓期满3种处理办法：a.无故意犯罪→期满减为【14】；b.有重大立功→期满减为【15】；c.故意犯罪且情节恶劣→报最高人民法院【16】。",
+    "answers": [
+      [
+        "管制"
+      ],
+      [
+        "拘役"
+      ],
+      [
+        "有期徒刑"
+      ],
+      [
+        "无期徒刑"
+      ],
+      [
+        "死刑"
+      ],
+      [
+        "罚金"
+      ],
+      [
+        "剥夺政治权利"
+      ],
+      [
+        "没收财产"
+      ],
+      [
+        "驱逐出境"
+      ],
+      [
+        "2"
+      ],
+      [
+        "1"
+      ],
+      [
+        "保留死刑"
+      ],
+      [
+        "严格控制和慎重适用死刑"
+      ],
+      [
+        "无期徒刑"
+      ],
+      [
+        "25年有期徒刑",
+        "二十五年有期徒刑"
+      ],
+      [
+        "核准执行死刑"
+      ]
+    ]
+  },
+  {
+    "id": "xf-十五",
+    "subject": "刑法",
+    "chapter": "第十五章 刑罚裁量",
+    "question": "我国刑法中量刑的基本原则是以【1】为依据，以【2】为准绳。\n\n一般累犯构成条件 =（主体）年满【3】周岁+（主观）前后罪均为【4】+（刑度）前罪【5】以上，后罪应当被判处【6】刑罚+（时间）后罪发生在前罪刑罚执行完毕或赦免后【7】内。\n\n立功的法律后果：有一般立功表现的，可以【8】或【9】处罚；有重大立功表现的，可以【10】或【11】处罚。\n\n刑罚执行期间发现漏罪的：【12】；刑罚执行期间又犯新罪的：【13】。\n\n一般缓刑刑度要求：被判【14】或【15】。一般缓刑排除情形：非【16】、非【17】。",
+    "answers": [
+      [
+        "犯罪事实"
+      ],
+      [
+        "刑事法律"
+      ],
+      [
+        "18"
+      ],
+      [
+        "故意犯罪"
+      ],
+      [
+        "有期徒刑"
+      ],
+      [
+        "有期徒刑以上"
+      ],
+      [
+        "5年",
+        "五年"
+      ],
+      [
+        "从轻"
+      ],
+      [
+        "减轻"
+      ],
+      [
+        "减轻"
+      ],
+      [
+        "免除"
+      ],
+      [
+        "先并后减"
+      ],
+      [
+        "先减后并"
+      ],
+      [
+        "拘役"
+      ],
+      [
+        "3年以下有期徒刑",
+        "三年以下有期徒刑"
+      ],
+      [
+        "累犯"
+      ],
+      [
+        "犯罪集团首要分子"
+      ]
+    ]
+  },
+  {
+    "id": "xf-十六",
+    "subject": "刑法",
+    "chapter": "第十六章 刑罚执行和刑罚消灭",
+    "question": "时效分为【1】和【2】。我国无行刑时效。\n\n赦免分为【3】和【4】。我国现行宪法只规定了【5】，没有规定【6】。",
+    "answers": [
+      [
+        "追诉时效"
+      ],
+      [
+        "行刑时效"
+      ],
+      [
+        "大赦"
+      ],
+      [
+        "特赦"
+      ],
+      [
+        "特赦"
+      ],
+      [
+        "大赦"
+      ]
+    ]
+  },
+  {
+    "id": "xf-十七",
+    "subject": "刑法",
+    "chapter": "第十七章 刑法各论概述",
+    "question": "法定刑可分为【1】、【2】的法定刑和【3】的法定刑。",
+    "answers": [
+      [
+        "绝对确定的法定刑"
+      ],
+      [
+        "绝对不确定"
+      ],
+      [
+        "相对确定"
+      ]
+    ]
+  },
+  {
+    "id": "xf-二十",
+    "subject": "刑法",
+    "chapter": "第二十章 破坏社会主义市场经济秩序罪",
+    "question": "洗钱罪是指掩饰、隐瞒【1】犯罪、【2】性质的组织犯罪、【3】犯罪、【4】犯罪、【5】犯罪、【6】犯罪、【7】犯罪的所得及其产生收益的来源和性质的行为。",
+    "answers": [
+      [
+        "毒品"
+      ],
+      [
+        "黑社会"
+      ],
+      [
+        "恐怖活动"
+      ],
+      [
+        "走私"
+      ],
+      [
+        "贪污贿赂"
+      ],
+      [
+        "破坏金融管理秩序"
+      ],
+      [
+        "金融诈骗"
+      ]
+    ]
+  }
+];
+
+</script>
+<script>
+/* ============ 状态管理 ============ */
+const STORAGE_KEY = 'lawQuizState_v1';
+const SCHEMA_VERSION = 3; // 题库结构变更时递增，会自动清空旧数据
+
+const defaultState = {
+  schemaVersion: SCHEMA_VERSION,
+  mode: 'practice',          // practice | wrong
+  subject: 'all',
+  order: 'sequential',
+  currentIdx: 0,             // 当前题在 currentList 中的索引
+  currentList: [],           // 当前题目 ID 列表
+  answered: {},              // { qid: { right: bool, blanks: [...] } }
+  wrongIds: [],              // 错题 ID 数组（去重）
+  totalAnswered: 0,
+  totalRight: 0,
+  totalBlanks: 0,
+  rightBlanks: 0,
+};
+
+let state = loadState();
+let currentMode = state.mode || 'practice';
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // 题库结构变更时清空旧数据
+      if (parsed.schemaVersion !== SCHEMA_VERSION) return Object.assign({}, defaultState);
+      return Object.assign({}, defaultState, parsed);
+    }
+  } catch(e) { console.warn('load fail', e); }
+  return Object.assign({}, defaultState);
+}
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+}
+
+/* ============ 工具 ============ */
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function buildQuestionList() {
+  let pool = QUESTIONS.filter(q => state.subject === 'all' || q.subject === state.subject);
+  if (state.order === 'random') pool = shuffle(pool);
+  return pool.map(q => q.id);
+}
+
+function getQuestionById(id) {
+  return QUESTIONS.find(q => q.id === id);
+}
+
+function updateProgress() {
+  const total = state.currentList.length || 1;
+  const cur = Math.min(state.currentIdx + 1, total);
+  document.getElementById('progressLabel').textContent = `第 ${cur} / ${total} 题`;
+  document.getElementById('progressFill').style.width = `${(cur/total)*100}%`;
+  const q = getQuestionById(state.currentList[state.currentIdx]);
+  document.getElementById('progressSubject').textContent = q ? `${q.subject} · ${q.chapter}` : '—';
+}
+
+/* ============ 渲染：题目卡片 ============ */
+function renderQuestion() {
+  const area = document.getElementById('quizArea');
+  document.getElementById('wrongListArea').classList.remove('show');
+  area.style.display = '';
+
+  if (!state.currentList || state.currentList.length === 0) {
+    state.currentList = buildQuestionList();
+    state.currentIdx = 0;
+  }
+
+  if (state.currentIdx >= state.currentList.length) {
+    area.innerHTML = `
+      <div class="question-card">
+        <div class="question-text" style="text-align:center; font-size:22px; padding:40px 0;">
+          🌾 已完成全部 ${state.currentList.length} 题
+        </div>
+        <div class="actions">
+          <button class="btn primary" onclick="restartList()">从头再来</button>
+          <button class="btn" onclick="switchMode('wrong')">查看错题</button>
+        </div>
+      </div>`;
+    updateProgress();
+    return;
+  }
+
+  const q = getQuestionById(state.currentList[state.currentIdx]);
+  if (!q) { state.currentIdx++; renderQuestion(); return; }
+
+  // 把 question 中的【n】替换为输入框
+  const blankCount = q.answers.length;
+  // 先把题干中的 HTML 特殊字符转义，再插入输入框 HTML
+  let html = q.question
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  for (let i = 0; i < blankCount; i++) {
+    const re = new RegExp('【' + (i+1) + '】', 'g');
+    const w = Math.max(80, (q.answers[i][0]?.length || 4) * 18);
+    html = html.replace(re, `<span class="blank-num">${i+1}</span><input class="blank-input" data-idx="${i}" autocomplete="off" spellcheck="false" style="min-width:${w}px;">`);
+  }
+  // 保留换行
+  html = html.replace(/\n/g, '<br>');
+
+  const prevAnswer = state.answered[q.id];
+  const showAnswers = !!prevAnswer;
+
+  area.innerHTML = `
+    <div class="question-card">
+      <div class="meta">
+        <span class="badge">${q.subject}</span>
+        <span>${q.chapter}</span>
+        <span class="qid">${q.id}</span>
+      </div>
+      <div class="question-text">${html}</div>
+      <div class="result-banner" id="resultBanner"></div>
+      <div class="kbd-hint">
+        <span class="kbd">←→↑↓</span> 切换空格 ·
+        <span class="kbd">Enter</span> 提交 / 下一题 ·
+        <span class="kbd">Tab</span> 下一空
+      </div>
+      <div class="actions">
+        <button class="btn" id="prevBtn" ${state.currentIdx===0?'disabled':''}>← 上一题</button>
+        <button class="btn primary" id="checkBtn">提交批改 <span class="kbd">Enter</span></button>
+        <button class="btn ghost" id="showAnsBtn">显示答案</button>
+        <button class="btn" id="nextBtn">下一题 →</button>
+        <button class="btn ghost" id="skipBtn">跳过</button>
+      </div>
+    </div>`;
+
+  // 事件绑定
+  document.getElementById('prevBtn').onclick = () => { if (state.currentIdx>0) { state.currentIdx--; saveState(); renderQuestion(); }};
+  document.getElementById('nextBtn').onclick = () => { state.currentIdx++; saveState(); renderQuestion(); };
+  document.getElementById('skipBtn').onclick = () => { state.currentIdx++; saveState(); renderQuestion(); };
+  document.getElementById('checkBtn').onclick = () => checkAnswer(q);
+  document.getElementById('showAnsBtn').onclick = () => {
+    // 直接在每个空旁边把正解贴出来（用于不想做想直接背的场景）
+    const inputs = area.querySelectorAll('.blank-input');
+    inputs.forEach((input, i) => {
+      // 已经有 inline-answer 就跳过
+      if (input.nextElementSibling && input.nextElementSibling.classList.contains('inline-answer')) return;
+      input.disabled = true;
+      input.classList.add('reveal');
+      const tag = document.createElement('span');
+      tag.className = 'inline-answer';
+      tag.innerHTML = `<span class="ia-arrow">▸</span><span class="ia-text">${q.answers[i].join(' / ')}</span>`;
+      input.insertAdjacentElement('afterend', tag);
+    });
+  };
+
+  // 全局键盘：
+  // Enter = 提交批改 / 已批改后 = 下一题
+  // 方向键（←→↑↓）= 在空格之间切换焦点
+  // Tab / Shift+Tab = 浏览器原生行为
+  if (window._currentKeyHandler) document.removeEventListener('keydown', window._currentKeyHandler);
+  const keyHandler = e => {
+    const active = document.activeElement;
+    const isOurInput = active && active.classList && active.classList.contains('blank-input');
+    const inOurArea = isOurInput || (active && area.contains(active));
+
+    // 方向键导航
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+      // 只有焦点在某个空格里，才接管方向键
+      if (!isOurInput) return;
+      const inputs = Array.from(area.querySelectorAll('.blank-input'));
+      const curIdx = inputs.indexOf(active);
+      if (curIdx === -1) return;
+
+      // 左右键：仅在光标在文本端点时才跳，否则让浏览器在文本里移动光标
+      if (e.key === 'ArrowLeft') {
+        if (active.selectionStart === 0 && active.selectionEnd === 0) {
+          e.preventDefault();
+          const prev = inputs[curIdx - 1];
+          if (prev && !prev.disabled) prev.focus();
+        }
+        return;
+      }
+      if (e.key === 'ArrowRight') {
+        if (active.selectionStart === active.value.length && active.selectionEnd === active.value.length) {
+          e.preventDefault();
+          const next = inputs[curIdx + 1];
+          if (next && !next.disabled) next.focus();
+        }
+        return;
+      }
+      // 上下键：直接跳上一个/下一个空格（按 DOM 顺序近似上下）
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const prev = inputs[curIdx - 1];
+        if (prev && !prev.disabled) prev.focus();
+        return;
+      }
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const next = inputs[curIdx + 1];
+        if (next && !next.disabled) next.focus();
+        return;
+      }
+    }
+
+    // 回车提交 / 进入下一题
+    if (e.key === 'Enter') {
+      if (!inOurArea && active !== document.body) return;
+      e.preventDefault();
+      if (state.answered[q.id]) {
+        state.currentIdx++;
+        saveState();
+        renderQuestion();
+      } else {
+        checkAnswer(q);
+      }
+    }
+  };
+  document.addEventListener('keydown', keyHandler);
+  window._currentKeyHandler = keyHandler;
+
+  // 输入框：左右切换空格用 Tab；Enter 由全局 handler 处理
+  area.querySelectorAll('.blank-input').forEach((input, i) => {
+    if (prevAnswer) {
+      input.value = prevAnswer.blanks[i] || '';
+      input.disabled = true;
+      const sc = prevAnswer.scores ? prevAnswer.scores[i] : (prevAnswer.results[i] ? 1 : 0);
+      if (sc === 1) input.classList.add('correct');
+      else if (sc > 0) input.classList.add('partial');
+      else input.classList.add('wrong');
+      // 错的或部分对的，旁边贴正解
+      if (sc < 1) {
+        const tag = document.createElement('span');
+        tag.className = 'inline-answer';
+        tag.innerHTML = `<span class="ia-arrow">▸</span><span class="ia-text">${q.answers[i].join(' / ')}</span>`;
+        input.insertAdjacentElement('afterend', tag);
+      }
+    }
+  });
+
+  if (prevAnswer) {
+    // 重新计算这道题的得分用于横幅显示
+    let totalScore = 0;
+    const scs = prevAnswer.scores || prevAnswer.results.map(r => r ? 1 : 0);
+    scs.forEach(s => totalScore += s);
+    const ratio = totalScore / scs.length;
+    showResultBanner(prevAnswer.right, ratio, scs.length, totalScore);
+  }
+
+  // 自动聚焦第一个输入框
+  if (!prevAnswer) {
+    const first = area.querySelector('.blank-input');
+    if (first) first.focus();
+  }
+
+  updateProgress();
+  updateStats();
+}
+
+/* ============ 字符相似度（基于 Levenshtein） ============ */
+function levenshtein(a, b) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  const dp = Array(b.length + 1).fill(0).map((_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = dp[0];
+    dp[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const tmp = dp[j];
+      dp[j] = a[i-1] === b[j-1]
+        ? prev
+        : Math.min(prev, dp[j], dp[j-1]) + 1;
+      prev = tmp;
+    }
+  }
+  return dp[b.length];
+}
+
+// 归一化用户输入：去标点空白，便于公平比较
+function normalize(s) {
+  if (!s) return '';
+  return s.trim()
+    .replace(/[\s\u3000]/g, '')
+    .replace(/[，,、；;]/g, '')
+    .replace(/[。.]/g, '')
+    .replace(/[（(）)]/g, '')
+    .replace(/[：:]/g, '')
+    .replace(/[""'']/g, '')
+    .replace(/[【】\[\]]/g, '');
+}
+
+// 返回 0~1 的得分。从 answers 数组里挑相似度最高那个作为基准。
+function scoreBlank(userVal, acceptedList) {
+  const u = normalize(userVal);
+  if (!u) return { score: 0, best: acceptedList[0] };
+  let bestScore = 0;
+  let best = acceptedList[0];
+  for (const a of acceptedList) {
+    const an = normalize(a);
+    if (u === an) return { score: 1, best: a };
+    const dist = levenshtein(u, an);
+    const maxLen = Math.max(u.length, an.length);
+    const sim = maxLen === 0 ? 0 : 1 - (dist / maxLen);
+    if (sim > bestScore) { bestScore = sim; best = a; }
+  }
+  return { score: Math.max(0, bestScore), best };
+}
+
+/* ============ 批改 ============ */
+function checkAnswer(q) {
+  const inputs = document.querySelectorAll('#quizArea .blank-input');
+  const blanks = [];
+  const scores = [];     // 每个空的得分 0~1
+  const results = [];    // 每个空是否完全正确（score === 1）
+  const bestMatches = []; // 每个空匹配到的标准答案
+  let totalScore = 0;
+
+  inputs.forEach((input, i) => {
+    const val = input.value.trim();
+    blanks.push(val);
+    const { score, best } = scoreBlank(val, q.answers[i]);
+    scores.push(score);
+    bestMatches.push(best);
+    const fullyRight = score === 1;
+    const partial = score > 0 && score < 1;
+    results.push(fullyRight);
+    totalScore += score;
+
+    input.disabled = true;
+    if (fullyRight) input.classList.add('correct');
+    else if (partial) input.classList.add('partial');
+    else input.classList.add('wrong');
+  });
+
+  const blankScore = totalScore / blanks.length;  // 这道题的整体得分（百分比）
+  const allRight = results.every(r => r);
+
+  // 在每个空旁边插入正解（只有不全对时显示，全对时不打扰）
+  inputs.forEach((input, i) => {
+    if (results[i]) return;
+    const tag = document.createElement('span');
+    tag.className = 'inline-answer';
+    tag.innerHTML = `<span class="ia-arrow">▸</span><span class="ia-text">${q.answers[i].join(' / ')}</span>`;
+    input.insertAdjacentElement('afterend', tag);
+  });
+
+  // 防止重复计入统计：用得分累加而不是 0/1
+  if (!state.answered[q.id]) {
+    state.totalAnswered++;
+    if (allRight) state.totalRight++;
+    state.totalBlanks += blanks.length;
+    state.rightBlanks += totalScore;  // 累加小数得分，统计正确率会更平滑
+    if (!allRight && !state.wrongIds.includes(q.id)) {
+      state.wrongIds.push(q.id);
+    }
+    if (allRight && state.wrongIds.includes(q.id) && currentMode === 'wrong') {
+      state.wrongIds = state.wrongIds.filter(id => id !== q.id);
+    }
+  }
+
+  state.answered[q.id] = { right: allRight, blanks, results, scores };
+  saveState();
+
+  showResultBanner(allRight, blankScore, blanks.length, totalScore);
+  updateStats();
+  // 批改后让焦点离开输入框，下一次 Enter 才能稳定地被全局 handler 接到
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+}
+
+function showResultBanner(right, scoreRatio, blankCount, totalScore) {
+  const b = document.getElementById('resultBanner');
+  b.classList.add('show');
+  const pct = Math.round(scoreRatio * 100);
+  if (right) {
+    b.classList.add('all-correct');
+    b.classList.remove('has-wrong');
+    b.innerHTML = '<span class="seal">對</span>全 部 正 確<span class="seal">對</span>';
+  } else {
+    b.classList.add('has-wrong');
+    b.classList.remove('all-correct');
+    b.innerHTML = `<span class="seal">${pct}%</span>本 题 得 分 <b>${pct}%</b>（${totalScore.toFixed(1)} / ${blankCount}）<span class="seal">${pct}%</span>`;
+  }
+}
+
+
+/* ============ 进度 / 统计 ============ */
+function updateStats() {
+  document.getElementById('statTotal').textContent = state.totalAnswered;
+  const acc = state.totalBlanks ? Math.round((state.rightBlanks / state.totalBlanks) * 100) : 0;
+  document.getElementById('statAcc').textContent = acc + '%';
+  document.getElementById('statRight').textContent = state.totalRight;
+  document.getElementById('statWrong').textContent = state.wrongIds.length;
+}
+
+/* ============ 错题本 ============ */
+function renderWrongList() {
+  // 进入错题本就清掉答题键盘 handler，避免误触
+  if (window._currentKeyHandler) {
+    document.removeEventListener('keydown', window._currentKeyHandler);
+    window._currentKeyHandler = null;
+  }
+  document.getElementById('quizArea').style.display = 'none';
+  const area = document.getElementById('wrongListArea');
+  area.classList.add('show');
+
+  if (state.wrongIds.length === 0) {
+    area.innerHTML = `
+      <div class="wrong-list-empty">
+        <div class="seal">○</div>
+        暂 无 错 题<br>
+        <span style="font-size:13px; letter-spacing:2px; opacity:0.6;">继续刷题，等你犯错</span>
+      </div>`;
+    return;
+  }
+
+  const wrongQs = state.wrongIds.map(getQuestionById).filter(Boolean);
+  area.innerHTML = `
+    <div class="question-card">
+      <div class="meta">
+        <span class="badge">错题本</span>
+        <span>共 ${wrongQs.length} 题待重做</span>
+      </div>
+      <div style="font-size:14px; color:var(--ink-soft); line-height:2; margin-bottom:16px;">
+        ${wrongQs.map((q,i) => `
+          <div style="padding:8px 0; border-bottom:1px dashed var(--rule);">
+            <span style="color:var(--vermillion); font-weight:700;">${i+1}.</span>
+            <span style="font-size:11px; background:var(--ink); color:var(--paper); padding:1px 6px; margin:0 6px;">${q.subject}</span>
+            ${q.question.replace(/【\d+】/g, '___').slice(0, 80)}${q.question.length>80?'...':''}
+          </div>
+        `).join('')}
+      </div>
+      <div class="actions">
+        <button class="btn primary" onclick="startWrongRedo()">开始重做错题</button>
+        <button class="btn ghost" onclick="clearWrongList()">清空错题本</button>
+      </div>
+    </div>
+  `;
+}
+
+function startWrongRedo() {
+  if (state.wrongIds.length === 0) return;
+  // 进入错题重做模式：用错题列表作为 currentList，但保留 wrongIds 不变（答对会自动移除）
+  state.currentList = state.wrongIds.slice();
+  state.currentIdx = 0;
+  // 清除这些题的 answered 记录，让用户重答
+  state.wrongIds.forEach(id => { delete state.answered[id]; });
+  saveState();
+  switchMode('practice');
+}
+
+function clearWrongList() {
+  if (!confirm('确定清空错题本？')) return;
+  state.wrongIds = [];
+  saveState();
+  renderWrongList();
+  updateStats();
+}
+
+/* ============ 模式切换 ============ */
+function switchMode(mode) {
+  // 离开听课模式：停止朗读
+  if (currentMode === 'listen' && mode !== 'listen') {
+    listenStop();
+  }
+
+  // 处理 reset 模式
+  if (mode === 'reset') {
+    if (confirm('确定要重置所有数据吗？\n（清空答题记录、统计、错题本，听课进度也会重置）')) {
+      localStorage.removeItem(STORAGE_KEY);
+      state = Object.assign({}, defaultState);
+      state.subject = document.getElementById('subjectSel').value;
+      state.order = document.getElementById('orderSel').value;
+      state.currentList = buildQuestionList();
+      saveState();
+      mode = 'practice';
+    } else {
+      // 取消，保持原模式
+      document.querySelectorAll('.tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.mode === currentMode);
+      });
+      return;
+    }
+  }
+
+  currentMode = mode;
+  state.mode = mode;
+
+  // 切换 tab 高亮
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.mode === mode);
+  });
+
+  // 根据模式显示对应区域
+  const quizArea = document.getElementById('quizArea');
+  const wrongArea = document.getElementById('wrongListArea');
+  const listenArea = document.getElementById('listenArea');
+  const controls = document.getElementById('controls');
+  const stats = document.getElementById('stats');
+  const progressWrap = document.getElementById('progressWrap');
+
+  // 默认隐藏
+  quizArea.style.display = 'none';
+  wrongArea.classList.remove('show');
+  listenArea.style.display = 'none';
+
+  if (mode === 'listen') {
+    // 听课模式：隐藏刷题相关 UI
+    controls.style.display = 'none';
+    stats.style.display = 'none';
+    progressWrap.style.display = 'none';
+    listenArea.style.display = '';
+    initListenView();
+  } else if (mode === 'wrong') {
+    controls.style.display = '';
+    stats.style.display = '';
+    progressWrap.style.display = '';
+    renderWrongList();
+  } else {
+    // practice
+    controls.style.display = '';
+    stats.style.display = '';
+    progressWrap.style.display = '';
+    renderQuestion();
+    updateStats();
+  }
+  saveState();
+}
+
+function restartList() {
+  state.currentIdx = 0;
+  saveState();
+  renderQuestion();
+}
+
+/* ============ 听课朗读模块 ============ */
+const listenState = {
+  subject: 'all',          // 科目过滤
+  chapterId: null,         // 当前章节 id
+  blankMode: 'answer',     // answer | hint
+  rate: 1.0,
+  voiceURI: '',
+  autoNext: 'next',        // off | next
+  isPlaying: false,
+  isPaused: false,
+  sentences: [],           // 当前章节切分后的句子数组
+  sentenceIdx: 0,          // 当前句子索引
+};
+
+// 把 listen state 持久化到主 state 里
+function listenSaveSettings() {
+  state.listen = {
+    subject: listenState.subject,
+    chapterId: listenState.chapterId,
+    blankMode: listenState.blankMode,
+    rate: listenState.rate,
+    voiceURI: listenState.voiceURI,
+    autoNext: listenState.autoNext,
+  };
+  saveState();
+}
+function listenLoadSettings() {
+  if (state.listen) {
+    Object.assign(listenState, state.listen);
+  }
+}
+
+// 中文数字转换 1->一 等（用于读出"序号"模式）
+function numToChinese(n) {
+  const m = ['零','一','二','三','四','五','六','七','八','九','十'];
+  if (n <= 10) return m[n];
+  if (n < 20) return '十' + m[n - 10];
+  if (n < 100) return m[Math.floor(n/10)] + '十' + (n%10 ? m[n%10] : '');
+  return String(n);
+}
+
+// 从一道大题生成朗读文本（依据 blankMode 决定怎么处理填空）
+function buildSpeechText(q, blankMode) {
+  let txt = q.question;
+  for (let i = 0; i < q.answers.length; i++) {
+    const num = i + 1;
+    const placeholder = `【${num}】`;
+    let replacement;
+    if (blankMode === 'hint') {
+      // 默写模式：读"第X空"
+      replacement = `（第${numToChinese(num)}空）`;
+    } else {
+      // 答案模式：读出标准答案的第一个版本
+      const ans = q.answers[i][0] || '';
+      replacement = ans;
+    }
+    txt = txt.split(placeholder).join(replacement);
+  }
+  return txt;
+}
+
+// 按句号、问号、分号、换行切句，单句过长再按逗号切
+function splitSentences(text) {
+  // 先按强标点分大块
+  const big = text.split(/(?<=[。！？!?；;])\s*|\n+/).filter(s => s && s.trim());
+  const out = [];
+  for (const s of big) {
+    const trimmed = s.trim();
+    if (trimmed.length <= 60) {
+      out.push(trimmed);
+    } else {
+      // 太长按逗号切
+      const small = trimmed.split(/(?<=[，,、：:])\s*/).filter(x => x && x.trim());
+      let buf = '';
+      for (const piece of small) {
+        if ((buf + piece).length > 50 && buf) {
+          out.push(buf);
+          buf = piece;
+        } else {
+          buf += piece;
+        }
+      }
+      if (buf) out.push(buf);
+    }
+  }
+  return out;
+}
+
+// 渲染章节列表
+function renderChapterSelect() {
+  const sel = document.getElementById('listenChapter');
+  const subject = listenState.subject;
+  const pool = QUESTIONS.filter(q => subject === 'all' || q.subject === subject);
+  sel.innerHTML = pool.map(q =>
+    `<option value="${q.id}">${q.subject} · ${q.chapter}</option>`
+  ).join('');
+  if (listenState.chapterId && pool.find(q => q.id === listenState.chapterId)) {
+    sel.value = listenState.chapterId;
+  } else if (pool.length > 0) {
+    listenState.chapterId = pool[0].id;
+    sel.value = listenState.chapterId;
+  }
+}
+
+// 渲染当前章节内容到屏幕
+function renderListenContent() {
+  const q = QUESTIONS.find(x => x.id === listenState.chapterId);
+  if (!q) return;
+  document.getElementById('listenBadge').textContent = q.subject;
+  document.getElementById('listenChapterTitle').textContent = q.chapter;
+
+  // 把题干渲染成可读的 HTML：填空位置根据 blankMode 显示
+  let html = q.question
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  for (let i = 0; i < q.answers.length; i++) {
+    const num = i + 1;
+    const re = new RegExp(`【${num}】`, 'g');
+    let display;
+    if (listenState.blankMode === 'hint') {
+      display = `<span class="blank-num-inline">[第${numToChinese(num)}空]</span>`;
+    } else {
+      display = `<span class="blank-mark">${q.answers[i][0]}</span>`;
+    }
+    html = html.replace(re, display);
+  }
+  html = html.replace(/\n/g, '<br>');
+
+  // 把每个句子包装一下，便于高亮
+  // 简单做：把整段先按句子切分，分别包 <span class="sentence">
+  // 但 HTML 里有了 br/span，直接切会破坏结构。退而求其次：先生成 plain 版用于切句、记录索引；显示用 html 不切。
+  // 这里高亮用滚动定位句子文本来实现：在 listenText 里我们用 plain 文本切成 sentence span
+  const speechPlain = buildSpeechText(q, listenState.blankMode);
+  const sentences = splitSentences(speechPlain);
+  listenState.sentences = sentences;
+
+  // 渲染：把 plain 文本以 sentence span 形式渲染（保留段落感）
+  // 简单方案：把 sentences 用 span 包，按行排列
+  const sentencesHtml = sentences.map((s, i) =>
+    `<span class="sentence" data-idx="${i}">${escapeHtml(s)}</span>`
+  ).join('');
+  document.getElementById('listenText').innerHTML = sentencesHtml;
+  updateListenProgress();
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function updateListenProgress() {
+  const total = listenState.sentences.length || 1;
+  const cur = Math.min(listenState.sentenceIdx + 1, total);
+  document.getElementById('listenProgress').textContent = `${cur} / ${total}`;
+  document.getElementById('listenProgressFill').style.width = `${(cur/total)*100}%`;
+}
+
+function highlightSentence(idx) {
+  const all = document.querySelectorAll('#listenText .sentence');
+  all.forEach(el => el.classList.remove('active'));
+  const cur = document.querySelector(`#listenText .sentence[data-idx="${idx}"]`);
+  if (cur) {
+    cur.classList.add('active');
+    // 滚动到 listenText 容器内可见位置（不影响页面整体滚动）
+    const container = document.getElementById('listenText');
+    const cTop = container.getBoundingClientRect().top;
+    const sTop = cur.getBoundingClientRect().top;
+    const offset = sTop - cTop - container.clientHeight / 2 + cur.clientHeight / 2;
+    container.scrollTop += offset;
+  }
+}
+
+// 选择最佳的中文女声
+function pickBestVoice(voices) {
+  // 优先级：保存的 voiceURI > 中文女声关键词 > 任一中文 > 默认
+  if (listenState.voiceURI) {
+    const v = voices.find(x => x.voiceURI === listenState.voiceURI);
+    if (v) return v;
+  }
+  const zh = voices.filter(v => /zh|chinese|cmn/i.test(v.lang) || /zh|chinese|cmn/i.test(v.name));
+  if (zh.length === 0) return voices[0];
+
+  // 关键词排序（女声常见标识）
+  const femalePatterns = [
+    /tingting/i, /ting-ting/i, /xiaoxiao/i, /xiaoyi/i, /yaoyao/i, /huihui/i,
+    /yating/i, /mei-jia/i, /female/i, /女/i, /siri.*女/i, /lily/i,
+    /yunyang/i, /xiaomeng/i,
+  ];
+  for (const pat of femalePatterns) {
+    const m = zh.find(v => pat.test(v.name) || pat.test(v.voiceURI));
+    if (m) return m;
+  }
+  // 第二轮：排除明显男声
+  const maleExclude = /male|男|kangkang|yunjian|yunxi|yunxia/i;
+  const fallback = zh.find(v => !maleExclude.test(v.name) && !maleExclude.test(v.voiceURI));
+  return fallback || zh[0];
+}
+
+function renderVoiceList() {
+  const sel = document.getElementById('listenVoice');
+  const voices = window.speechSynthesis.getVoices();
+  const zh = voices.filter(v => /zh|chinese|cmn/i.test(v.lang) || /zh|chinese|cmn/i.test(v.name));
+  if (zh.length === 0) {
+    sel.innerHTML = `<option value="">（设备无中文语音，请检查系统设置）</option>`;
+    document.getElementById('listenTip').textContent = '提示：iOS 用户在 设置→辅助功能→旁白→语音 添加中文女声；Windows 用户在 设置→时间和语言→语音 添加普通话语音包';
+    return;
+  }
+  sel.innerHTML = zh.map(v => {
+    const tag = /female|tingting|xiaoxiao|xiaoyi|yaoyao|huihui|lily|mei.*jia|yating/i.test(v.name + v.voiceURI) ? '（女）' : '';
+    return `<option value="${v.voiceURI}">${v.name}${tag} — ${v.lang}</option>`;
+  }).join('');
+  // 默认选女声
+  const best = pickBestVoice(voices);
+  if (best) {
+    sel.value = best.voiceURI;
+    listenState.voiceURI = best.voiceURI;
+  }
+}
+
+let _voicesLoaded = false;
+function ensureVoicesLoaded(cb) {
+  if (_voicesLoaded) { cb(); return; }
+  const voices = window.speechSynthesis.getVoices();
+  if (voices.length > 0) { _voicesLoaded = true; cb(); return; }
+  window.speechSynthesis.addEventListener('voiceschanged', () => {
+    if (_voicesLoaded) return;
+    _voicesLoaded = true;
+    renderVoiceList();
+    cb();
+  }, { once: true });
+}
+
+// 朗读单句
+let _currentUtterance = null;
+let _stopRequested = false;
+
+function speakSentence(idx, onEnd) {
+  if (idx >= listenState.sentences.length) {
+    if (onEnd) onEnd('finished');
+    return;
+  }
+  const text = listenState.sentences[idx];
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'zh-CN';
+  u.rate = listenState.rate;
+  u.pitch = 1.0;
+  u.volume = 1.0;
+
+  const voices = window.speechSynthesis.getVoices();
+  const v = voices.find(x => x.voiceURI === listenState.voiceURI);
+  if (v) u.voice = v;
+
+  highlightSentence(idx);
+  listenState.sentenceIdx = idx;
+  updateListenProgress();
+
+  u.onend = () => {
+    if (_stopRequested) { _stopRequested = false; return; }
+    if (idx + 1 < listenState.sentences.length) {
+      // 句末稍作停顿，更自然
+      setTimeout(() => speakSentence(idx + 1, onEnd), 180);
+    } else {
+      if (onEnd) onEnd('chapter-end');
+    }
+  };
+  u.onerror = (e) => {
+    console.warn('TTS error', e);
+    if (idx + 1 < listenState.sentences.length) {
+      setTimeout(() => speakSentence(idx + 1, onEnd), 250);
+    } else {
+      if (onEnd) onEnd('error');
+    }
+  };
+
+  _currentUtterance = u;
+  window.speechSynthesis.speak(u);
+}
+
+// Chrome bug 修复：speechSynthesis 长时间播放会卡住，定期 pause/resume 保活
+let _keepAliveTimer = null;
+function startKeepAlive() {
+  stopKeepAlive();
+  _keepAliveTimer = setInterval(() => {
+    if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+      window.speechSynthesis.pause();
+      window.speechSynthesis.resume();
+    }
+  }, 10000);
+}
+function stopKeepAlive() {
+  if (_keepAliveTimer) clearInterval(_keepAliveTimer);
+  _keepAliveTimer = null;
+}
+
+function onChapterEnd(reason) {
+  if (listenState.autoNext === 'next' && reason === 'chapter-end') {
+    // 自动连播下一章
+    const pool = QUESTIONS.filter(q => listenState.subject === 'all' || q.subject === listenState.subject);
+    const curIdx = pool.findIndex(q => q.id === listenState.chapterId);
+    if (curIdx >= 0 && curIdx + 1 < pool.length) {
+      listenState.chapterId = pool[curIdx + 1].id;
+      document.getElementById('listenChapter').value = listenState.chapterId;
+      renderListenContent();
+      listenSaveSettings();
+      // 章节间停顿
+      setTimeout(() => speakSentence(0, onChapterEnd), 800);
+      return;
+    } else {
+      // 全部播完
+      listenStop();
+      document.getElementById('listenTip').textContent = '✓ 已播完所选范围';
+      return;
+    }
+  }
+  if (listenState.autoNext === 'off' && reason === 'chapter-end') {
+    // 单章重复
+    setTimeout(() => speakSentence(0, onChapterEnd), 1200);
+    return;
+  }
+  // 其他情况：停止
+  listenStop();
+}
+
+function listenPlay() {
+  if (!('speechSynthesis' in window)) {
+    alert('当前浏览器不支持语音朗读，请使用 Chrome / Edge / Safari 最新版');
+    return;
+  }
+  // 如果暂停状态，恢复
+  if (listenState.isPaused) {
+    window.speechSynthesis.resume();
+    listenState.isPaused = false;
+    listenState.isPlaying = true;
+    updateListenButtons();
+    startKeepAlive();
+    return;
+  }
+  // 否则从当前句开始
+  _stopRequested = false;
+  listenState.isPlaying = true;
+  listenState.isPaused = false;
+  updateListenButtons();
+  startKeepAlive();
+  // 取消之前可能的残留
+  window.speechSynthesis.cancel();
+  setTimeout(() => speakSentence(listenState.sentenceIdx || 0, onChapterEnd), 100);
+  document.getElementById('listenTip').textContent = '';
+}
+
+function listenPause() {
+  if (window.speechSynthesis.speaking) {
+    window.speechSynthesis.pause();
+    listenState.isPaused = true;
+    listenState.isPlaying = false;
+    updateListenButtons();
+    stopKeepAlive();
+  }
+}
+
+function listenStop() {
+  _stopRequested = true;
+  window.speechSynthesis.cancel();
+  listenState.isPlaying = false;
+  listenState.isPaused = false;
+  listenState.sentenceIdx = 0;
+  stopKeepAlive();
+  updateListenButtons();
+  updateListenProgress();
+  // 清除高亮
+  document.querySelectorAll('#listenText .sentence.active').forEach(el => el.classList.remove('active'));
+}
+
+function updateListenButtons() {
+  const playBtn = document.getElementById('listenPlayBtn');
+  const pauseBtn = document.getElementById('listenPauseBtn');
+  const stopBtn = document.getElementById('listenStopBtn');
+  if (listenState.isPlaying) {
+    playBtn.textContent = '▶ 朗读中…';
+    playBtn.disabled = true;
+    pauseBtn.disabled = false;
+    stopBtn.disabled = false;
+  } else if (listenState.isPaused) {
+    playBtn.textContent = '▶ 继续';
+    playBtn.disabled = false;
+    pauseBtn.disabled = true;
+    stopBtn.disabled = false;
+  } else {
+    playBtn.textContent = '▶ 开始朗读';
+    playBtn.disabled = false;
+    pauseBtn.disabled = true;
+    stopBtn.disabled = true;
+  }
+}
+
+function listenJumpChapter(direction) {
+  // direction: -1 上一章 / +1 下一章
+  const pool = QUESTIONS.filter(q => listenState.subject === 'all' || q.subject === listenState.subject);
+  let curIdx = pool.findIndex(q => q.id === listenState.chapterId);
+  if (curIdx === -1) curIdx = 0;
+  const newIdx = curIdx + direction;
+  if (newIdx < 0 || newIdx >= pool.length) return;
+  listenStop();
+  listenState.chapterId = pool[newIdx].id;
+  document.getElementById('listenChapter').value = listenState.chapterId;
+  renderListenContent();
+  listenSaveSettings();
+}
+
+let _listenInitialized = false;
+function initListenView() {
+  if (!_listenInitialized) {
+    _listenInitialized = true;
+    listenLoadSettings();
+    // 加载语音
+    ensureVoicesLoaded(() => {
+      renderVoiceList();
+      // 恢复上次保存的 voice
+      if (state.listen && state.listen.voiceURI) {
+        const sel = document.getElementById('listenVoice');
+        if ([...sel.options].some(o => o.value === state.listen.voiceURI)) {
+          sel.value = state.listen.voiceURI;
+          listenState.voiceURI = state.listen.voiceURI;
+        }
+      }
+    });
+    // 立即尝试一次
+    renderVoiceList();
+
+    // 绑定事件
+    document.getElementById('listenSubject').value = listenState.subject;
+    document.getElementById('listenSubject').addEventListener('change', e => {
+      listenStop();
+      listenState.subject = e.target.value;
+      listenState.chapterId = null;
+      renderChapterSelect();
+      renderListenContent();
+      listenSaveSettings();
+    });
+    document.getElementById('listenChapter').addEventListener('change', e => {
+      listenStop();
+      listenState.chapterId = e.target.value;
+      renderListenContent();
+      listenSaveSettings();
+    });
+    document.getElementById('listenBlankMode').value = listenState.blankMode;
+    document.getElementById('listenBlankMode').addEventListener('change', e => {
+      listenStop();
+      listenState.blankMode = e.target.value;
+      renderListenContent();
+      listenSaveSettings();
+    });
+    document.getElementById('listenRate').value = String(listenState.rate);
+    document.getElementById('listenRate').addEventListener('change', e => {
+      listenState.rate = parseFloat(e.target.value);
+      listenSaveSettings();
+    });
+    document.getElementById('listenAutoNext').value = listenState.autoNext;
+    document.getElementById('listenAutoNext').addEventListener('change', e => {
+      listenState.autoNext = e.target.value;
+      listenSaveSettings();
+    });
+    document.getElementById('listenVoice').addEventListener('change', e => {
+      listenState.voiceURI = e.target.value;
+      listenSaveSettings();
+    });
+
+    document.getElementById('listenPlayBtn').addEventListener('click', listenPlay);
+    document.getElementById('listenPauseBtn').addEventListener('click', listenPause);
+    document.getElementById('listenStopBtn').addEventListener('click', listenStop);
+    document.getElementById('listenPrevBtn').addEventListener('click', () => listenJumpChapter(-1));
+    document.getElementById('listenNextBtn').addEventListener('click', () => listenJumpChapter(1));
+
+    // 点击句子跳转
+    document.getElementById('listenText').addEventListener('click', e => {
+      const s = e.target.closest('.sentence');
+      if (!s) return;
+      const idx = parseInt(s.dataset.idx, 10);
+      if (Number.isFinite(idx)) {
+        listenStop();
+        listenState.sentenceIdx = idx;
+        updateListenProgress();
+        // 立即开始播
+        listenPlay();
+      }
+    });
+  }
+
+  // 每次进入听课模式刷新一遍
+  renderChapterSelect();
+  renderListenContent();
+  updateListenButtons();
+}
+
+/* ============ 初始化 ============ */
+function init() {
+  document.getElementById('totalQ').textContent = QUESTIONS.length;
+  document.getElementById('totalB').textContent = QUESTIONS.reduce((s,q)=>s+q.answers.length, 0);
+
+  // 恢复 UI
+  document.getElementById('subjectSel').value = state.subject;
+  document.getElementById('orderSel').value = state.order;
+
+  // 切科目/顺序时重建
+  document.getElementById('subjectSel').addEventListener('change', e => {
+    state.subject = e.target.value;
+    state.currentList = buildQuestionList();
+    state.currentIdx = 0;
+    saveState();
+    if (currentMode === 'practice') renderQuestion();
+  });
+  document.getElementById('orderSel').addEventListener('change', e => {
+    state.order = e.target.value;
+    state.currentList = buildQuestionList();
+    state.currentIdx = 0;
+    saveState();
+    if (currentMode === 'practice') renderQuestion();
+  });
+
+  // tab 切换
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => switchMode(t.dataset.mode));
+  });
+
+  // 初始题目列表
+  if (!state.currentList || state.currentList.length === 0) {
+    state.currentList = buildQuestionList();
+  }
+
+  // 进入正确模式
+  switchMode(currentMode);
+}
+
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
